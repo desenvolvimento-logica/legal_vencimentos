@@ -14,6 +14,7 @@ const validPublic = {
 const validServer = {
   SUPABASE_SECRET_KEY: "sb_secret_teste",
   ACESSORIAS_API_TOKEN: "acessorias-secret",
+  CRON_SECRET: "c".repeat(32),
 };
 
 describe("parsePublicEnv", () => {
@@ -57,7 +58,7 @@ describe("parseServerEnv", () => {
 
   it("exige os segredos do servidor", () => {
     expect(() => parseServerEnv({})).toThrow(
-      /SUPABASE_SECRET_KEY, ACESSORIAS_API_TOKEN/,
+      /SUPABASE_SECRET_KEY, ACESSORIAS_API_TOKEN, CRON_SECRET/,
     );
   });
 

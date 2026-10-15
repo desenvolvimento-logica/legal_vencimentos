@@ -16,6 +16,8 @@ describe("isPublicPath", () => {
     ["/dashboard", false],
     ["/", false],
     ["/authx", false],
+    ["/api/sync", true],
+    ["/api/other", false],
   ])("%s -> %s", (path, expected) => {
     expect(isPublicPath(path)).toBe(expected);
   });

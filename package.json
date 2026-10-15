@@ -13,7 +13,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:bundle": "node scripts/bundle-migrations.mjs",
-    "db:types": "vitest run supabase/tests/database-types.test.ts -u"
+    "db:types": "vitest run supabase/tests/database-types.test.ts -u",
+    "sync": "node scripts/sync.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

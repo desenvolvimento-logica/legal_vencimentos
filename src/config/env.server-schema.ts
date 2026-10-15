@@ -8,6 +8,8 @@ export const serverEnvSchema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(1),
   ACESSORIAS_API_URL: z.url().default(DEFAULT_ACESSORIAS_API_URL),
   ACESSORIAS_API_TOKEN: z.string().min(1),
+  /** Protege /api/sync (Vercel Cron envia "Authorization: Bearer <CRON_SECRET>"). */
+  CRON_SECRET: z.string().min(32),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -16,6 +18,7 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 const FORBIDDEN_PUBLIC_NAMES = [
   "NEXT_PUBLIC_SUPABASE_SECRET_KEY",
   "NEXT_PUBLIC_ACESSORIAS_API_TOKEN",
+  "NEXT_PUBLIC_CRON_SECRET",
 ];
 
 export function parseServerEnv(
@@ -33,6 +36,7 @@ export function parseServerEnv(
     // Valor vazio no .env equivale a não definido, para aplicar o default.
     ACESSORIAS_API_URL: source.ACESSORIAS_API_URL || undefined,
     ACESSORIAS_API_TOKEN: source.ACESSORIAS_API_TOKEN,
+    CRON_SECRET: source.CRON_SECRET,
   });
   if (!result.success) {
     throw new Error(formatEnvError(result.error, "do servidor"));

@@ -671,6 +671,28 @@ describe("solicitações, perfis e configurações", () => {
   });
 });
 
+describe("sincronização", () => {
+  it("permite só uma execução RUNNING por integração e tipo", async () => {
+    const message = await runAs(
+      db,
+      "service_role",
+      { role: "service_role" },
+      async (tx) => {
+        const insert = (type: string) =>
+          tx.query(
+            `insert into public.legal_sync_logs (integration, sync_type, started_at, status)
+             values ('acessorias', $1, now(), 'RUNNING')`,
+            [type],
+          );
+        await insert("companies");
+        await insert("users"); // outro tipo pode rodar em paralelo
+        return expectDbError(insert("companies"));
+      },
+    );
+    expect(message).toMatch(/legal_sync_logs_one_running_idx/);
+  });
+});
+
 describe("validação da hierarquia", () => {
   const rejects = async (sql: string) =>
     expectDbError(

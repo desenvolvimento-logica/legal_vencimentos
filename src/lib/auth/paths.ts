@@ -8,7 +8,8 @@ export const AUTH_CALLBACK_PATH = "/auth/callback";
  */
 export const NEXT_PATH_COOKIE = "legal_auth_next";
 
-const PUBLIC_PREFIXES = [LOGIN_PATH, "/auth/"];
+// /api/sync não usa sessão: a rota exige o CRON_SECRET.
+const PUBLIC_PREFIXES = [LOGIN_PATH, "/auth/", "/api/sync"];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some(
