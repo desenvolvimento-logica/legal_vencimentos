@@ -218,6 +218,12 @@ Estado (15/10/2026): implementada. Validação automatizada: testes unitários, 
 - sincronização, cursor e logs;
 - painel mínimo para teste/manual sync admin.
 
+Estado (15/10/2026): implementada (contratos, cliente HTTP, mapeadores, orquestração e `/api/sync`), com 136 testes. Ainda faltam:
+- aplicar `legal_011` e `legal_012` em produção;
+- executar a carga inicial com `npm run sync`.
+
+O painel administrativo de integrações fica para a Fase 8; até lá, o status das execuções fica em `legal_sync_logs`. Detalhes em ACESSORIAS.md §11–12.
+
 ### Fase 4 — Escopo
 
 - funções de perfil/árvore/cliente;
@@ -266,7 +272,7 @@ Bloqueio de fase: não avançar sem comprovar RLS pelas vias de acesso direto.
 - Produção: https://legal-vencimentos.vercel.app (primeiro deploy em 15/10/2026).
 - Projeto `legal-vencimentos` no time Vercel **LuzIA** (plano Hobby; cron limitado a uma execução diária, aceito pelo responsável em 15/10/2026). Node 24.x (`engines` no `package.json`).
 - Deploy via integração Git: push no `main` gera produção. O app da Vercel no GitHub precisa de acesso ao repositório `desenvolvimento-logica/legal_vencimentos`.
-- Variáveis configuradas nos três ambientes: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. `SUPABASE_SECRET_KEY` e `ACESSORIAS_API_TOKEN` entram na Fase 3, como variáveis sensíveis e somente em produção.
+- Variáveis configuradas nos três ambientes: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. `SUPABASE_SECRET_KEY`, `ACESSORIAS_API_TOKEN` e `CRON_SECRET` estão configuradas como variáveis sensíveis, somente em produção. O cron diário está declarado em `vercel.json`.
 - A URL de produção (`https://<domínio>/auth/callback`) precisa constar nas Redirect URLs do Supabase. Deploys de preview não fazem login, a menos que suas URLs também sejam liberadas.
 
 ## 11. Estratégia de testes
@@ -340,14 +346,12 @@ Não criar branches ou commits automaticamente quando a tarefa atual não pedir 
 
 Estas questões não invalidam o escopo já definido, mas precisam ser resolvidas antes da parte afetada:
 
-1. Quais são os caminhos, parâmetros, limites e schemas exatos dos endpoints de empresas, usuários, departamentos e listagem de solicitações do Acessórias?
-2. Quais transições de status são permitidas (por exemplo, `RENEWING` pode voltar a `ACTIVE`? de quais estados se pode cancelar?) e qual a política de edição/cancelamento/exclusão lógica por nível, além da regra geral de escopo? Adiado pelo responsável em 15/10/2026; bloqueia a Fase 6.
-3. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados? Proposta aplicada nas migrations, sujeita a revisão: nomes e órgão emissor até 200 caracteres, número do documento até 100, observações até 2000.
-4. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
-5. Qual ambiente e processo executarão sincronizações automáticas e com qual frequência?
-6. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
-7. **Responsável do vencimento (RF-05):** "preencher automaticamente a partir do contexto autorizado" pode significar o usuário logado ou o perfil cujo e-mail é o responsável do cliente no Acessórias. Também falta definir quais valores de `responsible_user_id` são aceitos (AUTHORIZATION.md §9 exige rejeitar valores forjados). Bloqueia a Fase 6; hoje o banco aceita qualquer perfil existente.
-8. **Subordinados inativos no escopo:** a implementação mantém a carteira de um subordinado inativo visível ao gestor, para que não fique órfã. Confirmar se é o comportamento desejado.
-9. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
+1. Quais transições de status são permitidas (por exemplo, `RENEWING` pode voltar a `ACTIVE`? de quais estados se pode cancelar?) e qual a política de edição/cancelamento/exclusão lógica por nível, além da regra geral de escopo? Adiado pelo responsável em 15/10/2026; bloqueia a Fase 6.
+2. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados? Proposta aplicada nas migrations, sujeita a revisão: nomes e órgão emissor até 200 caracteres, número do documento até 100, observações até 2000.
+3. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
+4. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
+5. **Responsável do vencimento (RF-05):** "preencher automaticamente a partir do contexto autorizado" pode significar o usuário logado ou o perfil cujo e-mail é o responsável do cliente no Acessórias. Também falta definir quais valores de `responsible_user_id` são aceitos (AUTHORIZATION.md §9 exige rejeitar valores forjados). Bloqueia a Fase 6; hoje o banco aceita qualquer perfil existente.
+6. **Subordinados inativos no escopo:** a implementação mantém a carteira de um subordinado inativo visível ao gestor, para que não fique órfã. Confirmar se é o comportamento desejado.
+7. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
 
 Ao obter uma resposta, atualizar o documento técnico correspondente e remover a questão desta lista.

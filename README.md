@@ -28,6 +28,7 @@ npm run dev                   # http://localhost:3000
 | `npm run format` / `format:check` | Prettier |
 | `npm run db:bundle` | Gera `supabase/apply/legal_apply.sql` para o SQL Editor |
 | `npm run db:types` | Regenera `src/types/database.ts` a partir das migrations |
+| `npm run sync -- <tipos> [--full]` | Sincroniza com o Acessórias via servidor local (`npm run dev`) |
 
 Antes de cada commit: `npm run typecheck && npm run lint && npm test && npm run format:check && npm run build`.
 

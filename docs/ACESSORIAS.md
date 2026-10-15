@@ -180,15 +180,27 @@ Falha em um registro pode produzir `PARTIAL` quando os demais forem persistidos 
 - Erros e logs não contêm token.
 - A tela de solicitações nunca oferece ou envia mutações.
 
-## 11. Contratos que precisam ser comprovados antes da implementação
+## 11. Contratos comprovados (15/10/2026)
 
-A SRS não fornece caminhos e schemas completos de todos os endpoints. Antes de codificar cada service, consultar a documentação oficial ou capturar resposta real autorizada e registrar testes/fixtures sanitizados para:
+Confirmados na documentação oficial e com chamadas reais somente leitura (só a estrutura foi inspecionada; fixtures sanitizados em `src/lib/acessorias/fixtures.ts`).
 
-- endpoint e paginação de empresas;
-- parâmetro e formato de `DtLastDH`;
-- endpoint de usuários e departamentos;
-- endpoint de listagem de solicitações;
-- schema do detalhe, interações e anexos;
-- códigos e headers reais de rate limit.
+| Recurso | Endpoint | Observações |
+| --- | --- | --- |
+| Departamentos | `GET /departments/ListAll` | Legalização = **5**; subdepartamento **13** (Certificado Digital, `IDPai` 5). O 4 é Financeiro. |
+| Empresas | `GET /companies/ListAll?departments=5,13&DtLastDH=…&Pagina=N` | `departments` filtra os departamentos retornados em `Departamentos[]` (`ID`, `Nome`, `RespNome`, `RespEmail`). Não há ID do usuário responsável. `DtLastDH` aceita ISO 8601 ou `aaaa-mm-dd hh:mm:ss`. ~2.009 empresas (101 páginas). |
+| Usuários | `GET /users/ListAll?Pagina=N` | Campos `id`, `nome`, `email`, `status`. Sem filtro incremental. ~343 usuários. |
+| Solicitações | `GET /requests/ListAll?SolUltAtIni=aaaa-mm-dd&Pagina=N` | **Sem filtro de departamento ou empresa**; ~258 mil no total. O filtro por departamento (`DptoID` 5/13) é feito após o download. Atualizadas por dia: ~57 páginas. |
+| Detalhe | `GET /requests/{SolID}` | Interações em `SolInteracoes`, anexos em `CmtAnx` (`Nome`, `Url`). Usado na Fase 7. |
 
-Não inventar esses contratos.
+- Datas/hora chegam como `dd/mm/aaaa hh:mm:ss` no horário de Brasília, sem fuso; são convertidas para UTC (`src/lib/acessorias/dates.ts`).
+- Paginação: 20 itens por página; termina na lista vazia. HTTP 204 = sem conteúdo.
+- Limite: 100 req/min (janela deslizante). O cliente usa 90 req/min para não disputar a cota com outros sistemas. 429 vem sem corpo.
+- Erros de negócio: HTTP 200 com `{ "Erro": "..." }`.
+
+## 12. Sincronização implementada
+
+- `/api/sync` (GET): Vercel Cron diário às 09:00 UTC (06:00 em Brasília), incremental em empresas, usuários e solicitações. Protegido por `CRON_SECRET`.
+- `npm run sync -- <tipos> [--full]`: chama `/api/sync` (POST) de um servidor local para a carga inicial, que excede o limite de 300 s de uma função na Vercel.
+- Empresas: o cursor é a maior `DtLastDH` processada, reusado com 60 s de margem.
+- Usuários: sempre carga completa.
+- Solicitações: carga completa limitada a `acessorias_request_initial_window_days` (90) dias; incremental desde o dia do último sucesso.
