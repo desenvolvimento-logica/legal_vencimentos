@@ -263,6 +263,7 @@ Bloqueio de fase: não avançar sem comprovar RLS pelas vias de acesso direto.
 
 ## 10.1 Hospedagem (Vercel)
 
+- Produção: https://legal-vencimentos.vercel.app (primeiro deploy em 15/10/2026).
 - Projeto `legal-vencimentos` no time Vercel **LuzIA** (plano Hobby; cron limitado a uma execução diária, aceito pelo responsável em 15/10/2026). Node 24.x (`engines` no `package.json`).
 - Deploy via integração Git: push no `main` gera produção. O app da Vercel no GitHub precisa de acesso ao repositório `desenvolvimento-logica/legal_vencimentos`.
 - Variáveis configuradas nos três ambientes: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. `SUPABASE_SECRET_KEY` e `ACESSORIAS_API_TOKEN` entram na Fase 3, como variáveis sensíveis e somente em produção.

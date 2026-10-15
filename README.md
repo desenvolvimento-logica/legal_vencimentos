@@ -6,6 +6,8 @@ Aplicação web interna para controlar certidões, licenças e certificados dos 
 
 Fases 0 (setup), 1 (banco) e 2 (autenticação) implementadas. O andamento de cada fase está em `docs/DEVELOPMENT.md`.
 
+Produção: https://legal-vencimentos.vercel.app (deploy automático a cada push no `main`).
+
 ## Como executar
 
 Requer Node.js 24 e npm.
