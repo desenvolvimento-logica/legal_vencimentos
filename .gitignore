@@ -43,3 +43,6 @@ next-env.d.ts
 
 # bundle de migrations gerado para o SQL Editor
 /supabase/apply/
+
+# vercel link
+.vercel

@@ -261,6 +261,13 @@ Bloqueio de fase: não avançar sem comprovar RLS pelas vias de acesso direto.
 - revisar performance, acessibilidade, segurança e UX;
 - revisar documentação e operação.
 
+## 10.1 Hospedagem (Vercel)
+
+- Projeto `legal-vencimentos` no time Vercel **LuzIA** (plano Hobby; cron limitado a uma execução diária, aceito pelo responsável em 15/10/2026). Node 24.x (`engines` no `package.json`).
+- Deploy via integração Git: push no `main` gera produção. O app da Vercel no GitHub precisa de acesso ao repositório `desenvolvimento-logica/legal_vencimentos`.
+- Variáveis configuradas nos três ambientes: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. `SUPABASE_SECRET_KEY` e `ACESSORIAS_API_TOKEN` entram na Fase 3, como variáveis sensíveis e somente em produção.
+- A URL de produção (`https://<domínio>/auth/callback`) precisa constar nas Redirect URLs do Supabase. Deploys de preview não fazem login, a menos que suas URLs também sejam liberadas.
+
 ## 11. Estratégia de testes
 
 ### Unitários
