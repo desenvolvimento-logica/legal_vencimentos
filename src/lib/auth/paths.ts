@@ -1,5 +1,12 @@
 export const LOGIN_PATH = "/login";
 export const HOME_PATH = "/dashboard";
+export const AUTH_CALLBACK_PATH = "/auth/callback";
+
+/**
+ * Destino pós-login guardado durante o OAuth. Fica fora da URL de retorno
+ * porque o Supabase só aceita `redirectTo` idêntico às Redirect URLs cadastradas.
+ */
+export const NEXT_PATH_COOKIE = "legal_auth_next";
 
 const PUBLIC_PREFIXES = [LOGIN_PATH, "/auth/"];
 

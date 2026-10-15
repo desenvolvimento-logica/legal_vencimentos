@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
+  AUTH_CALLBACK_PATH,
   LOGIN_PATH,
+  NEXT_PATH_COOKIE,
   safeNextPath,
   type LoginErrorCode,
 } from "@/lib/auth/paths";
@@ -13,12 +15,21 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const flowId = searchParams.get("sb_flow_id");
-  const next = safeNextPath(searchParams.get("next"));
+  // O cookie vale para uma única tentativa e é descartado em qualquer saída.
+  const next = safeNextPath(request.cookies.get(NEXT_PATH_COOKIE)?.value);
+  const redirectTo = (url: URL) => {
+    const response = NextResponse.redirect(url);
+    response.cookies.delete({
+      name: NEXT_PATH_COOKIE,
+      path: AUTH_CALLBACK_PATH,
+    });
+    return response;
+  };
 
   const toLogin = (erro: LoginErrorCode) => {
     const url = new URL(LOGIN_PATH, origin);
     url.searchParams.set("erro", erro);
-    return NextResponse.redirect(url);
+    return redirectTo(url);
   };
 
   if (!code || searchParams.has("error")) {
@@ -43,5 +54,5 @@ export async function GET(request: NextRequest) {
     return toLogin(profileError ? "falha-verificacao" : "sem-acesso");
   }
 
-  return NextResponse.redirect(new URL(next, origin));
+  return redirectTo(new URL(next, origin));
 }

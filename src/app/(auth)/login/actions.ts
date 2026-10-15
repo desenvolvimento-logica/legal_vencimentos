@@ -1,9 +1,13 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { safeNextPath } from "@/lib/auth/paths";
+import {
+  AUTH_CALLBACK_PATH,
+  NEXT_PATH_COOKIE,
+  safeNextPath,
+} from "@/lib/auth/paths";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -16,10 +20,19 @@ export async function signInWithMicrosoft(formData: FormData): Promise<void> {
     requestHeaders.get("origin") ??
     `${requestHeaders.get("x-forwarded-proto") ?? "https"}://${requestHeaders.get("host")}`;
 
-  const callbackUrl = new URL("/auth/callback", origin);
-  callbackUrl.searchParams.set(
-    "next",
+  // Sem query string: precisa bater exatamente com a Redirect URL cadastrada.
+  const callbackUrl = new URL(AUTH_CALLBACK_PATH, origin);
+
+  (await cookies()).set(
+    NEXT_PATH_COOKIE,
     safeNextPath(String(formData.get("next") ?? "")),
+    {
+      httpOnly: true,
+      secure: callbackUrl.protocol === "https:",
+      sameSite: "lax",
+      path: AUTH_CALLBACK_PATH,
+      maxAge: 600,
+    },
   );
 
   const supabase = await createSupabaseServerClient();
