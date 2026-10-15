@@ -84,6 +84,7 @@ A relação hierárquica é formada por `legal_profiles.manager_id`. A semântic
 ### RF-04 — Carteira e clientes
 
 - `/clients`, com título “Meus Clientes”, mostra apenas o escopo autorizado.
+- Somente clientes ativos no Acessórias (`Status = Ativa`) aparecem no sistema, para todos os níveis. Inativos continuam no cache para registrar mudanças de situação (decisão de 15/10/2026).
 - Colunas: razão social, nome fantasia, CNPJ, responsável Legalização, vencimentos ativos, próximo vencimento e vencidos.
 - Busca server-side por razão social, nome fantasia e CNPJ.
 - Paginação e ordenação server-side.

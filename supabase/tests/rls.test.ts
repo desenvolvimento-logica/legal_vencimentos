@@ -43,9 +43,11 @@ const C = {
   shared: "20000000-0000-4000-8000-00000000000e",
   // Só o subdepartamento 13, com B.
   certificateOfB: "20000000-0000-4000-8000-00000000000f",
+  // Empresa inativa no Acessórias, com A como responsável: ninguém vê (legal_015).
+  deactivatedOfA: "20000000-0000-4000-8000-000000000010",
 } as const;
 
-const ALL_CLIENTS = Object.values(C);
+const ALL_CLIENTS = Object.values(C).filter((id) => id !== C.deactivatedOfA);
 
 let db: PGlite;
 let expirationOfA: string;
@@ -107,13 +109,14 @@ beforeAll(async () => {
       ('${P.userB}', '${U.userB}', 'Usuário B', 'b@teste.local', 'USER', null, true),
       ('${P.inactive}', '${U.inactive}', 'Inativo', 'inativo@teste.local', 'USER', '${P.leader}', false);
 
-    insert into public.legal_clients (id, acessorias_company_id, corporate_name, synced_at) values
-      ('${C.ofA}', 'EMP-A', 'Cliente A', now()),
-      ('${C.ofB}', 'EMP-B', 'Cliente B', now()),
-      ('${C.ofInactive}', 'EMP-I', 'Cliente Inativo', now()),
-      ('${C.withoutResponsible}', 'EMP-N', 'Cliente sem responsável', now()),
-      ('${C.shared}', 'EMP-S', 'Cliente compartilhado', now()),
-      ('${C.certificateOfB}', 'EMP-C', 'Cliente de certificado', now());
+    insert into public.legal_clients (id, acessorias_company_id, corporate_name, status, synced_at) values
+      ('${C.ofA}', 'EMP-A', 'Cliente A', 'Ativa', now()),
+      ('${C.ofB}', 'EMP-B', 'Cliente B', 'Ativa', now()),
+      ('${C.ofInactive}', 'EMP-I', 'Cliente do perfil inativo', 'Ativa', now()),
+      ('${C.withoutResponsible}', 'EMP-N', 'Cliente sem responsável', 'Ativa', now()),
+      ('${C.shared}', 'EMP-S', 'Cliente compartilhado', 'Ativa', now()),
+      ('${C.certificateOfB}', 'EMP-C', 'Cliente de certificado', 'Ativa', now()),
+      ('${C.deactivatedOfA}', 'EMP-D', 'Empresa inativa', 'Inativa', now());
 
     -- A carteira vem dos responsáveis por departamento (legal_011).
     insert into public.legal_client_responsibles (client_id, department_id, responsible_email, synced_at) values
@@ -122,7 +125,8 @@ beforeAll(async () => {
       ('${C.ofInactive}', '5', 'inativo@teste.local', now()),
       ('${C.shared}', '5', 'a@teste.local', now()),
       ('${C.shared}', '13', 'b@teste.local', now()),
-      ('${C.certificateOfB}', '13', 'b@teste.local', now());
+      ('${C.certificateOfB}', '13', 'b@teste.local', now()),
+      ('${C.deactivatedOfA}', '5', 'a@teste.local', now());
 
     insert into public.legal_acessorias_requests (acessorias_request_id, acessorias_company_id, subject, synced_at) values
       ('SOL-A', 'EMP-A', 'Solicitação do cliente A', now()),
@@ -280,6 +284,21 @@ describe("escopo de clientes por hierarquia", () => {
   ])("%s", async (_, userId, expected) => {
     const visible = await asUser(db, userId, visibleClients);
     expect(visible).toEqual([...expected].sort());
+  });
+
+  it("empresa inativa no Acessórias não aparece nem para o ADMIN", async () => {
+    for (const userId of [U.userA, U.admin, U.director]) {
+      const visible = await asUser(db, userId, visibleClients);
+      expect(visible).not.toContain(C.deactivatedOfA);
+    }
+    const canAccess = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query<{ ok: boolean }>(
+        "select public.legal_can_access_client($1) as ok",
+        [C.deactivatedOfA],
+      );
+      return rows[0].ok;
+    });
+    expect(canAccess).toBe(false);
   });
 
   it("legal_can_access_client respeita o escopo", async () => {
