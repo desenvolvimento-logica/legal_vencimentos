@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 
-import { AppHeader, AppHeaderSkeleton } from "@/components/layout/app-header";
+import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { requireProfile } from "@/lib/auth/session";
 
+// Referência visual: docs/mockups/02-dashboard.png (shell autenticado único).
 export default function DashboardLayout({
   children,
 }: {
@@ -13,10 +14,8 @@ export default function DashboardLayout({
     <div className="flex min-h-screen">
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Suspense fallback={<AppHeaderSkeleton />}>
-          <AppHeader />
-        </Suspense>
-        <main className="flex-1 p-6">
+        <AppHeader />
+        <main className="flex-1 px-4 py-6 sm:px-8 sm:py-8">
           <Suspense fallback={<ContentSkeleton />}>
             <RequireActiveProfile>{children}</RequireActiveProfile>
           </Suspense>
@@ -40,8 +39,8 @@ function ContentSkeleton() {
   return (
     <div className="flex flex-col gap-4" aria-busy="true">
       <span className="sr-only">Carregando…</span>
-      <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
-      <div className="h-32 animate-pulse rounded-md bg-muted" />
+      <div className="h-10 w-64 animate-pulse rounded-md bg-muted" />
+      <div className="h-32 animate-pulse rounded-xl bg-muted" />
     </div>
   );
 }

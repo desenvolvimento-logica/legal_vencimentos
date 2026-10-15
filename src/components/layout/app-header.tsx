@@ -1,38 +1,38 @@
-import { LogOut } from "lucide-react";
+import { Suspense } from "react";
 
-import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/auth/actions";
 import { HIERARCHY_LABELS } from "@/lib/auth/labels";
 import { requireProfile } from "@/lib/auth/session";
 
-export async function AppHeader() {
-  const profile = await requireProfile();
+import { Breadcrumb } from "./breadcrumb";
+import { MobileNav } from "./mobile-nav";
+import { UserMenu } from "./user-menu";
 
+// O cabeçalho aparece na hora; só o menu do usuário espera a sessão.
+export function AppHeader() {
   return (
-    <header className="flex h-14 items-center justify-end gap-4 border-b px-6">
-      <div className="text-right leading-tight">
-        <p className="text-sm font-medium">{profile.name}</p>
-        <p className="text-xs text-muted-foreground">
-          {HIERARCHY_LABELS[profile.hierarchyLevel]}
-        </p>
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-card px-4 sm:px-8">
+      <MobileNav />
+      <div className="min-w-0 flex-1">
+        <Breadcrumb />
       </div>
-      <form action={signOut}>
-        <Button type="submit" variant="ghost" size="sm">
-          <LogOut aria-hidden />
-          Sair
-        </Button>
-      </form>
+      <Suspense
+        fallback={
+          <div className="size-9 animate-pulse rounded-full bg-muted" />
+        }
+      >
+        <CurrentUserMenu />
+      </Suspense>
     </header>
   );
 }
 
-export function AppHeaderSkeleton() {
+async function CurrentUserMenu() {
+  const profile = await requireProfile();
   return (
-    <header
-      className="flex h-14 items-center justify-end border-b px-6"
-      aria-busy="true"
-    >
-      <div className="h-8 w-40 animate-pulse rounded-md bg-muted" />
-    </header>
+    <UserMenu
+      name={profile.name}
+      email={profile.email}
+      roleLabel={HIERARCHY_LABELS[profile.hierarchyLevel]}
+    />
   );
 }
