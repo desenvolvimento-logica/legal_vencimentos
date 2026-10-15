@@ -45,3 +45,12 @@ export function Breadcrumb() {
     </nav>
   );
 }
+
+/** Exibido até a URL ser conhecida (rotas dinâmicas sob cacheComponents). */
+export function BreadcrumbFallback() {
+  return (
+    <p className="hidden text-sm text-muted-foreground sm:block">
+      Controle de Vencimentos
+    </p>
+  );
+}

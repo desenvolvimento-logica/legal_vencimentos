@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { HIERARCHY_LABELS } from "@/lib/auth/labels";
 import { requireProfile } from "@/lib/auth/session";
 
-import { Breadcrumb } from "./breadcrumb";
+import { Breadcrumb, BreadcrumbFallback } from "./breadcrumb";
 import { MobileNav } from "./mobile-nav";
 import { UserMenu } from "./user-menu";
 
@@ -13,7 +13,9 @@ export function AppHeader() {
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-card px-4 sm:px-8">
       <MobileNav />
       <div className="min-w-0 flex-1">
-        <Breadcrumb />
+        <Suspense fallback={<BreadcrumbFallback />}>
+          <Breadcrumb />
+        </Suspense>
       </div>
       <Suspense
         fallback={
