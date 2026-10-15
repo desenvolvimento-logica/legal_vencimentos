@@ -8,11 +8,11 @@ import {
 
 const validPublic = {
   NEXT_PUBLIC_SUPABASE_URL: "https://olyvjnqmrzkziirzbmhi.supabase.co",
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_teste",
 };
 
 const validServer = {
-  SUPABASE_SERVICE_ROLE_KEY: "service-role-secret",
+  SUPABASE_SECRET_KEY: "sb_secret_teste",
   ACESSORIAS_API_TOKEN: "acessorias-secret",
 };
 
@@ -23,7 +23,7 @@ describe("parsePublicEnv", () => {
 
   it("lista as variáveis ausentes", () => {
     expect(() => parsePublicEnv({})).toThrow(
-      /NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY/,
+      /NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/,
     );
   });
 
@@ -52,12 +52,12 @@ describe("parseServerEnv", () => {
         ACESSORIAS_API_URL: "secreto-invalido",
       });
     expect(run).toThrow(/ACESSORIAS_API_URL/);
-    expect(run).not.toThrow(/secreto-invalido|service-role-secret/);
+    expect(run).not.toThrow(/secreto-invalido|sb_secret_teste/);
   });
 
   it("exige os segredos do servidor", () => {
     expect(() => parseServerEnv({})).toThrow(
-      /SUPABASE_SERVICE_ROLE_KEY, ACESSORIAS_API_TOKEN/,
+      /SUPABASE_SECRET_KEY, ACESSORIAS_API_TOKEN/,
     );
   });
 

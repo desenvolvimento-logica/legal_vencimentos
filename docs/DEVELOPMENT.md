@@ -68,7 +68,7 @@ A estrutura pode mudar com justificativa técnica, mantendo separação entre UI
 
 Separar explicitamente:
 
-- browser client: anon key, sessão do usuário e operações protegidas por RLS;
+- browser client: chave publishable (papel `anon`), sessão do usuário e operações protegidas por RLS;
 - server client: cookies/sessão da requisição e operações do usuário;
 - service-role client: módulo `server-only`, importado apenas por sincronização/provisionamento que realmente precise ignorar RLS.
 
@@ -80,13 +80,13 @@ Manter `.env.example` sem valores secretos:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
 ACESSORIAS_API_URL=https://api.acessorias.com
 ACESSORIAS_API_TOKEN=
 ```
 
-`.env.local` nunca é versionado. Validar as variáveis server-side no boot/build e separar schema público do schema secreto. Nunca prefixar service role ou token Acessórias com `NEXT_PUBLIC_`.
+`.env.local` nunca é versionado. Validar as variáveis server-side no boot/build e separar schema público do schema secreto. Nunca prefixar a chave secret (papel `service_role`) ou o token Acessórias com `NEXT_PUBLIC_`. A chave secret só é necessária a partir da Fase 3 (sincronização e provisionamento).
 
 ## 5. Organização da interface
 
@@ -311,13 +311,12 @@ Não criar branches ou commits automaticamente quando a tarefa atual não pedir 
 
 Estas questões não invalidam o escopo já definido, mas precisam ser resolvidas antes da parte afetada:
 
-1. Qual a distinção entre `legal_expirations.previous_expiration_id` e `renewed_from_id`? O fluxo especificado usa apenas `previous_expiration_id`.
-2. Quais são os caminhos, parâmetros, limites e schemas exatos dos endpoints de empresas, usuários, departamentos e listagem de solicitações do Acessórias?
-3. Qual deve ser a política de edição/cancelamento/exclusão lógica por nível, além da regra geral de escopo?
-4. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados?
-5. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
-6. Qual ambiente e processo executarão sincronizações automáticas e com qual frequência?
-7. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
-8. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
+1. Quais são os caminhos, parâmetros, limites e schemas exatos dos endpoints de empresas, usuários, departamentos e listagem de solicitações do Acessórias?
+2. Quais transições de status são permitidas (por exemplo, `RENEWING` pode voltar a `ACTIVE`? de quais estados se pode cancelar?) e qual a política de edição/cancelamento/exclusão lógica por nível, além da regra geral de escopo? Adiado pelo responsável em 15/10/2026; bloqueia a Fase 6.
+3. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados?
+4. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
+5. Qual ambiente e processo executarão sincronizações automáticas e com qual frequência?
+6. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
+7. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
 
 Ao obter uma resposta, atualizar o documento técnico correspondente e remover a questão desta lista.

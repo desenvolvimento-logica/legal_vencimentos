@@ -5,7 +5,7 @@ import { formatEnvError } from "./env";
 export const DEFAULT_ACESSORIAS_API_URL = "https://api.acessorias.com";
 
 export const serverEnvSchema = z.object({
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  SUPABASE_SECRET_KEY: z.string().min(1),
   ACESSORIAS_API_URL: z.url().default(DEFAULT_ACESSORIAS_API_URL),
   ACESSORIAS_API_TOKEN: z.string().min(1),
 });
@@ -14,7 +14,7 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
 // Segredos expostos com NEXT_PUBLIC_ seriam embutidos no bundle do browser.
 const FORBIDDEN_PUBLIC_NAMES = [
-  "NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY",
+  "NEXT_PUBLIC_SUPABASE_SECRET_KEY",
   "NEXT_PUBLIC_ACESSORIAS_API_TOKEN",
 ];
 
@@ -29,7 +29,7 @@ export function parseServerEnv(
   }
 
   const result = serverEnvSchema.safeParse({
-    SUPABASE_SERVICE_ROLE_KEY: source.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET_KEY: source.SUPABASE_SECRET_KEY,
     // Valor vazio no .env equivale a não definido, para aplicar o default.
     ACESSORIAS_API_URL: source.ACESSORIAS_API_URL || undefined,
     ACESSORIAS_API_TOKEN: source.ACESSORIAS_API_TOKEN,

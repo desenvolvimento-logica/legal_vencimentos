@@ -152,17 +152,19 @@ Cache dos usuários do Acessórias. Não concede acesso à aplicação.
 | `status` | `legal_expiration_status` NOT NULL DEFAULT `ACTIVE` |
 | `notes` | TEXT NULL |
 | `previous_expiration_id` | UUID NULL, FK autorreferente com `ON DELETE RESTRICT` |
-| `renewed_from_id` | UUID NULL, reservado conforme SRS original; não usar até definir a diferença para `previous_expiration_id` |
+| `renewed_at` | TIMESTAMPTZ NULL; preenchido quando o registro passa a `RENEWED` (base do indicador “renovados no mês”) |
 | `created_by` | UUID NOT NULL, FK `legal_profiles(id)` com `ON DELETE RESTRICT` |
 | `updated_by` | UUID NOT NULL, FK `legal_profiles(id)` com `ON DELETE RESTRICT` |
 | `created_at` | TIMESTAMPTZ NOT NULL DEFAULT now() |
 | `updated_at` | TIMESTAMPTZ NOT NULL DEFAULT now() |
 | `deleted_at` | TIMESTAMPTZ NULL |
 
+A coluna `renewed_from_id` da SRS original não será criada: `previous_expiration_id` já representa a cadeia de renovação (decisão de 15/10/2026).
+
 Restrições:
 
 - `previous_expiration_id <> id`;
-- `renewed_from_id <> id`, caso o campo seja ativado;
+- `renewed_at` preenchido se e somente se `status = 'RENEWED'`;
 - impedir ciclos na cadeia de renovação;
 - definir limites de strings no schema Zod e, para campos críticos, também por `CHECK` no banco;
 - não exigir `issue_date <= expiration_date` sem confirmação do negócio, pois a SRS não define essa regra.
@@ -293,7 +295,7 @@ Funções `SECURITY DEFINER` precisam de owner controlado, `search_path` explíc
 1. carregar e bloquear o vencimento anterior (`FOR UPDATE`);
 2. verificar sessão, escopo, `deleted_at IS NULL` e estado `RENEWING`;
 3. validar o payload do novo registro;
-4. atualizar o anterior para `RENEWED` e `updated_by`;
+4. atualizar o anterior para `RENEWED`, `renewed_at = now()` e `updated_by`;
 5. inserir o novo `ACTIVE` com `previous_expiration_id = old.id`;
 6. gravar auditoria dos dois efeitos;
 7. retornar o novo registro.
