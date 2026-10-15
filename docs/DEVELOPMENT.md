@@ -1,0 +1,323 @@
+# Desenvolvimento e qualidade
+
+## 1. Stack obrigatória
+
+- Next.js com App Router
+- React
+- TypeScript com `strict: true`
+- Tailwind CSS
+- shadcn/ui
+- Lucide Icons
+- TanStack Query para server state
+- React Hook Form para formulários
+- Zod para validação nas fronteiras
+- Supabase Auth e PostgreSQL/RLS
+
+Não usar JavaScript sem tipagem. Estado simples de interface fica local; não introduzir store global sem necessidade comprovada.
+
+## 2. Estrutura de referência
+
+```text
+src/
+├── app/
+│   ├── (auth)/
+│   │   └── login/
+│   ├── (dashboard)/
+│   │   ├── dashboard/
+│   │   ├── clients/
+│   │   ├── expirations/
+│   │   └── admin/
+│   └── api/
+├── components/
+│   ├── ui/
+│   ├── layout/
+│   ├── clients/
+│   ├── expirations/
+│   ├── requests/
+│   └── admin/
+├── lib/
+│   ├── supabase/
+│   ├── acessorias/
+│   ├── auth/
+│   ├── permissions/
+│   ├── validators/
+│   └── utils/
+├── services/
+│   ├── clients/
+│   ├── expirations/
+│   ├── requests/
+│   ├── users/
+│   └── sync/
+├── types/
+└── config/
+
+supabase/
+└── migrations/
+
+docs/
+├── SRS.md
+├── DATABASE.md
+├── ACESSORIAS.md
+├── AUTHORIZATION.md
+└── DEVELOPMENT.md
+```
+
+A estrutura pode mudar com justificativa técnica, mantendo separação entre UI, domínio, banco, integrações, validação e autenticação.
+
+## 3. Supabase clients
+
+Separar explicitamente:
+
+- browser client: anon key, sessão do usuário e operações protegidas por RLS;
+- server client: cookies/sessão da requisição e operações do usuário;
+- service-role client: módulo `server-only`, importado apenas por sincronização/provisionamento que realmente precise ignorar RLS.
+
+Adicionar barreira de importação para impedir que service role alcance Client Components. Prefira funções/RPCs com privilégios mínimos quando não houver necessidade de service role.
+
+## 4. Variáveis de ambiente
+
+Manter `.env.example` sem valores secretos:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+ACESSORIAS_API_URL=https://api.acessorias.com
+ACESSORIAS_API_TOKEN=
+```
+
+`.env.local` nunca é versionado. Validar as variáveis server-side no boot/build e separar schema público do schema secreto. Nunca prefixar service role ou token Acessórias com `NEXT_PUBLIC_`.
+
+## 5. Organização da interface
+
+Desktop:
+
+```text
+┌──────────────┬────────────────────────────────┐
+│              │ Header                         │
+│   Sidebar    ├────────────────────────────────┤
+│              │ Conteúdo                       │
+└──────────────┴────────────────────────────────┘
+```
+
+Sidebar:
+
+- Dashboard
+- Clientes
+- Vencimentos
+- Administração
+  - Usuários
+  - Hierarquia
+  - Integrações
+  - Auditoria
+
+O grupo Administração aparece apenas quando autorizado, sem substituir a proteção server-side.
+
+Componentes reutilizáveis esperados:
+
+```text
+AppSidebar          AppHeader          PageHeader
+MetricCard          StatusBadge        ExpirationBadge
+DataTable           Pagination         FilterBar
+ClientCard          ClientHeader
+ExpirationForm      ExpirationTable    ExpirationDetails
+RequestTable        RequestTimeline
+UserForm            UserTable          HierarchyTree
+EmptyState          ErrorState         LoadingState
+ConfirmDialog
+```
+
+Criar componentes quando houver uso real; não gerar shells vazios antecipadamente.
+
+## 6. Server state e formulários
+
+- TanStack Query gerencia cache, revalidação e estados de consulta no cliente.
+- Chaves de query incluem escopo funcional, filtros, ordenação e página; identidade/autorização vem da sessão, não de parâmetro confiado.
+- Após mutações, invalidar somente as chaves afetadas.
+- React Hook Form usa schema Zod compartilhado quando possível.
+- Toda mutação revalida dados no servidor e deriva autoria/escopo da sessão.
+- Desabilitar submissão duplicada e apresentar erros por campo e erro geral.
+
+## 7. Paginação e busca
+
+Clientes e vencimentos usam paginação, filtros e ordenação server-side. A UI envia apenas filtros validados e uma lista fechada de campos de ordenação. Não interpolar nome de coluna arbitrário.
+
+Busca textual usa debounce. Respostas incluem itens, página, tamanho da página e total quando a consulta suportar. Não carregar tudo para filtrar no React.
+
+## 8. Datas
+
+- Banco: `DATE` para emissão/vencimento e `TIMESTAMPTZ` para eventos.
+- Interface: `dd/MM/yyyy`.
+- Cálculos: `America/Sao_Paulo` explicitamente.
+- `dias restantes = expiration_date - data_atual_operacional` em dias civis.
+- Hoje fica na faixa 0–7; ontem é vencido; o limite 7 pertence à primeira faixa, 15 à segunda e 30 à terceira.
+- Testes de data congelam o relógio e cobrem virada do dia/mês/ano e horário de verão histórico sem depender do fuso da máquina.
+
+## 9. Logging e tratamento de erros
+
+- Criar logger centralizado, com níveis e campos estruturados.
+- Sanitizar erros externos antes de enviar à UI.
+- Correlation/request ID deve conectar ação administrativa e log de sincronização quando houver infraestrutura para isso.
+- Nunca registrar password, access/refresh token, service role ou token Acessórias.
+- Falhas não podem resultar em toast de sucesso ou cursor avançado.
+
+## 10. Ordem de implementação
+
+### Fase 0 — Setup
+
+- iniciar Next.js/App Router e TypeScript estrito;
+- configurar Tailwind, shadcn/ui, lint e formatter;
+- criar `.env.example` e validação de ambiente;
+- configurar scripts `dev`, `build`, `lint`, `typecheck` e `test`.
+
+Saída: aplicação mínima compila, lint/typecheck passam e nenhum secret está presente.
+
+Estado (15/10/2026): concluída. Versões adotadas: Next.js 16.4, React 19.3, Tailwind 4, shadcn/ui (preset `base-nova`, primitivas `@base-ui/react`), Zod 4, Vitest 5, Node 24. A validação de ambiente está em `src/config/env.ts` (pública) e `src/config/env.server.ts` (`server-only`); hoje ela é preguiçosa, executada no primeiro uso. A validação no boot (via `instrumentation.ts`) entra na Fase 1, quando houver valores reais em `.env.local`, para não bloquear o desenvolvimento antes disso.
+
+### Fase 1 — Banco
+
+- conectar ao Supabase corporativo e inspecionar o schema;
+- criar migrations de enums, tabelas, índices, funções e RLS;
+- provisionar o admin de modo idempotente;
+- gerar tipos TypeScript do schema.
+
+Saída: migrations revisadas, não destrutivas e testes de RLS executáveis. Não iniciar funcionalidades dependentes antes disso.
+
+### Fase 2 — Autenticação
+
+- login, sessão, perfil ativo, logout e proteção de rotas;
+- guards server-side e navegação autorizada;
+- teste de usuário inativo e rotas privadas.
+
+### Fase 3 — Acessórias
+
+- cliente HTTP tipado;
+- validação de contratos reais;
+- services de usuários, departamentos e empresas;
+- sincronização, cursor e logs;
+- painel mínimo para teste/manual sync admin.
+
+### Fase 4 — Escopo
+
+- funções de perfil/árvore/cliente;
+- policies completas;
+- matriz USER a ADMIN;
+- testes explícitos USER A versus cliente de USER B.
+
+Bloqueio de fase: não avançar sem comprovar RLS pelas vias de acesso direto.
+
+### Fase 5 — Clientes
+
+- listagem, busca, paginação, detalhe e abas;
+- agregados de vencimentos por cliente;
+- estados loading/error/empty.
+
+### Fase 6 — Vencimentos
+
+- criar, consultar, editar, filtrar e calcular display status;
+- iniciar/concluir renovação atomicamente;
+- histórico e auditoria.
+
+### Fase 7 — Solicitações
+
+- sincronizar resumos;
+- listar/filtrar por cliente;
+- detalhe server-side, timeline e anexos;
+- garantir ausência de mutações.
+
+### Fase 8 — Administração
+
+- usuários, árvore, integrações e auditoria;
+- validações de ciclo/nível e transações.
+
+### Fase 9 — Dashboard
+
+- métricas e tabela de próximos vencimentos, com escopo e queries otimizadas.
+
+### Fase 10 — Qualidade
+
+- completar testes unitários, integração e E2E;
+- revisar performance, acessibilidade, segurança e UX;
+- revisar documentação e operação.
+
+## 11. Estratégia de testes
+
+### Unitários
+
+- cálculo de dias e faixas de vencimento;
+- estado visual `EXPIRED` sem mutar o registro;
+- schemas Zod;
+- transições permitidas de status;
+- validação da hierarquia;
+- transformação dos payloads do Acessórias;
+- classificação de erros/retry.
+
+### Integração
+
+- autenticação e perfil ativo;
+- RLS de todas as tabelas;
+- criação/edição/exclusão lógica de vencimento;
+- início e conclusão atômica da renovação;
+- cadeia histórica;
+- hierarquia recursiva;
+- sincronização idempotente, logs e cursores;
+- auditoria.
+
+### E2E prioritário
+
+```text
+Login
+→ Dashboard
+→ Cliente
+→ Novo vencimento
+→ Acompanhamento
+→ Iniciar renovação
+→ Concluir renovação
+→ Histórico
+```
+
+Adicionar E2E de acesso negado e fluxo administrativo principal.
+
+## 12. Definition of Done
+
+Uma tarefa está concluída quando:
+
+- comportamento e tratamento de erros estão completos;
+- TypeScript compila em modo estrito;
+- lint passa;
+- testes relevantes passam;
+- RLS e autorização continuam corretas;
+- operações assíncronas possuem loading, sucesso, erro e vazio quando aplicável;
+- logs não expõem dados secretos;
+- não há credenciais versionadas;
+- documentação afetada está atualizada.
+
+## 13. Git
+
+Fazer commits pequenos e semanticamente claros antes de grandes mudanças. Sugestão de recortes:
+
+```text
+feat/database-schema
+feat/authentication
+feat/acessorias-sync
+feat/client-scope
+feat/expiration-management
+feat/admin
+```
+
+Não criar branches ou commits automaticamente quando a tarefa atual não pedir isso.
+
+## 14. Questões em aberto
+
+Estas questões não invalidam o escopo já definido, mas precisam ser resolvidas antes da parte afetada:
+
+1. Qual a distinção entre `legal_expirations.previous_expiration_id` e `renewed_from_id`? O fluxo especificado usa apenas `previous_expiration_id`.
+2. Quais são os caminhos, parâmetros, limites e schemas exatos dos endpoints de empresas, usuários, departamentos e listagem de solicitações do Acessórias?
+3. Qual deve ser a política de edição/cancelamento/exclusão lógica por nível, além da regra geral de escopo?
+4. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados?
+5. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
+6. Qual ambiente e processo executarão sincronizações automáticas e com qual frequência?
+7. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
+8. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
+
+Ao obter uma resposta, atualizar o documento técnico correspondente e remover a questão desta lista.
