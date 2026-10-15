@@ -348,6 +348,16 @@ feat/admin
 
 Não criar branches ou commits automaticamente quando a tarefa atual não pedir isso.
 
+## 13.1 Onde paramos (15/10/2026)
+
+- **Em produção** (https://legal-vencimentos.vercel.app), com migrations `legal_001` a `legal_015` aplicadas:
+  - login Microsoft;
+  - shell (mockup 02);
+  - Meus Clientes e detalhe do cliente (mockups 03 e 04, somente leitura).
+- **Dados:** carga inicial feita (1.147 clientes ativos, 343 usuários, 853 solicitações da Legalização). O cron diário mantém a sincronização incremental.
+- **Pendente de confirmação:** a tela Clientes deve mostrar 1.147 clientes (efeito da `legal_015`).
+- **Próximo:** Fase 6 (cadastro, edição e renovação de vencimentos; mockups 04-drawer, 05 e 07). Depende das questões 1 e 5 abaixo; o mockup 04 sugere, na questão 5, o responsável da Legalização do cliente como padrão.
+
 ## 14. Questões em aberto
 
 Estas questões não invalidam o escopo já definido, mas precisam ser resolvidas antes da parte afetada:
