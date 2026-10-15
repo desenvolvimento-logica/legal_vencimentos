@@ -430,6 +430,7 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      legal_auth_uid: { Args: never; Returns: string };
       legal_can_access_client: {
         Args: { client_uuid: string };
         Returns: boolean;
@@ -447,6 +448,7 @@ export type Database = {
       legal_has_global_scope: { Args: never; Returns: boolean };
       legal_is_admin: { Args: never; Returns: boolean };
       legal_scope_emails: { Args: never; Returns: string[] };
+      legal_session_is_microsoft: { Args: never; Returns: boolean };
     };
     Enums: {
       legal_expiration_status:

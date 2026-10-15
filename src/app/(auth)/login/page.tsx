@@ -1,14 +1,16 @@
-import { LockKeyhole } from "lucide-react";
+import { CircleAlert, LockKeyhole } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { HOME_PATH, isLoginErrorCode, LOGIN_ERRORS } from "@/lib/auth/paths";
 import { getSessionState } from "@/lib/auth/session";
 
-import { LoginForm } from "./login-form";
+import { signInWithMicrosoft } from "./actions";
+import { MicrosoftSignInButton } from "./microsoft-sign-in-button";
 
 export const metadata: Metadata = {
   title: "Entrar — Controle de Vencimentos",
@@ -44,9 +46,14 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 
         <Card className="w-full max-w-md px-2 py-8 sm:px-6 sm:py-10">
           <div className="flex flex-col gap-6 px-6">
-            <h2 className="text-3xl font-bold tracking-tight">
-              Acesse sua conta
-            </h2>
+            <div className="flex flex-col gap-2">
+              <h2 className="text-3xl font-bold tracking-tight">
+                Acesse sua conta
+              </h2>
+              <p className="text-muted-foreground">
+                Entre com sua conta Microsoft corporativa do escritório.
+              </p>
+            </div>
             <Suspense fallback={<LoginFormSkeleton />}>
               <LoginContent searchParams={searchParams} />
             </Suspense>
@@ -96,14 +103,20 @@ async function LoginContent({
   }
 
   const params = await searchParams;
-  const next = typeof params.next === "string" ? params.next : undefined;
+  const next = typeof params.next === "string" ? params.next : "";
   const erro = params.erro;
 
   return (
-    <LoginForm
-      next={next}
-      initialError={isLoginErrorCode(erro) ? LOGIN_ERRORS[erro] : undefined}
-    />
+    <form action={signInWithMicrosoft} className="flex flex-col gap-5">
+      {isLoginErrorCode(erro) && (
+        <Alert variant="destructive">
+          <CircleAlert aria-hidden />
+          <AlertDescription>{LOGIN_ERRORS[erro]}</AlertDescription>
+        </Alert>
+      )}
+      <input type="hidden" name="next" value={next} />
+      <MicrosoftSignInButton />
+    </form>
   );
 }
 
@@ -111,8 +124,6 @@ function LoginFormSkeleton() {
   return (
     <div className="flex flex-col gap-5" aria-busy="true" aria-live="polite">
       <span className="sr-only">Carregando…</span>
-      <div className="h-[4.25rem] animate-pulse rounded-lg bg-muted" />
-      <div className="h-[4.25rem] animate-pulse rounded-lg bg-muted" />
       <div className="h-11 animate-pulse rounded-lg bg-muted" />
     </div>
   );

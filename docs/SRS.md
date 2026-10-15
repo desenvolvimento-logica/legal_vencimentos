@@ -16,7 +16,7 @@ O Sistema Acessórias é a fonte oficial de clientes, responsáveis e solicitaç
 
 Incluído:
 
-- login por e-mail e senha via Supabase Auth;
+- login exclusivamente com conta Microsoft (Azure/Entra ID, tenant do escritório) via Supabase Auth;
 - perfis internos e hierarquia organizacional;
 - sincronização de clientes, usuários e solicitações do Acessórias;
 - carteira de clientes por responsável de Legalização;
@@ -54,12 +54,14 @@ A relação hierárquica é formada por `legal_profiles.manager_id`. A semântic
 
 ### RF-01 — Autenticação e sessão
 
-- Autenticar com e-mail e senha usando Supabase Auth.
+- Autenticar exclusivamente com conta Microsoft (provedor `azure` do Supabase Auth, restrito ao tenant do escritório). Decisão do responsável em 15/10/2026, substituindo o login por e-mail e senha.
+- O login por e-mail/senha continua habilitado no projeto Supabase compartilhado, mas sessões que não vieram da Microsoft não acessam nenhum dado deste sistema (bloqueio no banco, `legal_010`).
+- Os usuários já existem em `auth.users` (projeto compartilhado). O acesso é concedido criando um perfil em `legal_profiles` para o usuário existente.
 - Persistir sessão de forma compatível com Next.js App Router.
 - Bloquear perfil inexistente ou com `active = false`.
 - Proteger todas as rotas privadas no servidor.
 - Permitir logout.
-- Manter a autorização desacoplada do provedor de login para futura adoção do Microsoft Entra ID.
+- Manter a autorização (perfil, hierarquia e RLS) desacoplada do provedor de login.
 
 ### RF-02 — Perfil e provisionamento administrativo
 

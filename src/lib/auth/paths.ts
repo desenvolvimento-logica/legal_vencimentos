@@ -30,11 +30,15 @@ export function safeNextPath(value: string | null | undefined): string {
 }
 
 export const LOGIN_ERRORS = {
-  "sem-acesso": "Seu usuário não tem acesso ativo a este sistema.",
+  "sem-acesso": "Sua conta Microsoft não tem acesso ativo a este sistema.",
+  "falha-microsoft":
+    "Não foi possível entrar com a conta Microsoft. Tente novamente.",
+  "falha-verificacao":
+    "Não foi possível verificar seu acesso. Tente novamente em instantes.",
 } as const;
 
 export type LoginErrorCode = keyof typeof LOGIN_ERRORS;
 
 export function isLoginErrorCode(value: unknown): value is LoginErrorCode {
-  return typeof value === "string" && value in LOGIN_ERRORS;
+  return typeof value === "string" && Object.hasOwn(LOGIN_ERRORS, value);
 }

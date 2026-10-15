@@ -49,7 +49,11 @@ describe("safeNextPath", () => {
 describe("isLoginErrorCode", () => {
   it("aceita apenas códigos conhecidos", () => {
     expect(isLoginErrorCode("sem-acesso")).toBe(true);
+    expect(isLoginErrorCode("falha-microsoft")).toBe(true);
     expect(isLoginErrorCode("<script>")).toBe(false);
+    // Chaves herdadas do protótipo não podem passar.
+    expect(isLoginErrorCode("toString")).toBe(false);
+    expect(isLoginErrorCode("constructor")).toBe(false);
     expect(isLoginErrorCode(undefined)).toBe(false);
   });
 });

@@ -39,3 +39,17 @@ as $$
 $$;
 
 grant execute on function auth.uid() to anon, authenticated, service_role;
+
+-- Mesma semântica de auth.jwt() do Supabase: claims completas da requisição.
+create function auth.jwt()
+returns jsonb
+language sql
+stable
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claim', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')
+  )::jsonb;
+$$;
+
+grant execute on function auth.jwt() to anon, authenticated, service_role;

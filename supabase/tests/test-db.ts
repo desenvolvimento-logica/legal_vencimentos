@@ -30,24 +30,55 @@ export async function createTestDb(): Promise<PGlite> {
 
 type Role = "anon" | "authenticated" | "service_role";
 
+type Claims = Record<string, unknown>;
+
+/** Claims de uma sessão criada pelo login Microsoft (Azure/Entra ID). */
+export function microsoftClaims(userId: string): Claims {
+  return {
+    sub: userId,
+    role: "authenticated",
+    amr: [{ method: "oauth", timestamp: 1_760_000_000 }],
+    app_metadata: { provider: "azure", providers: ["azure"] },
+  };
+}
+
+/** Claims de uma sessão criada por e-mail e senha. */
+export function passwordClaims(userId: string): Claims {
+  return {
+    sub: userId,
+    role: "authenticated",
+    amr: [{ method: "password", timestamp: 1_760_000_000 }],
+    app_metadata: { provider: "email", providers: ["email", "azure"] },
+  };
+}
+
+/** Aplica papel e claims JWT na transação, como o PostgREST faz. */
+export async function setSession(
+  tx: Transaction,
+  role: Role,
+  claims: Claims,
+): Promise<void> {
+  await tx.query("select set_config('request.jwt.claims', $1, true)", [
+    JSON.stringify(claims),
+  ]);
+  await tx.exec(`set local role ${role}`);
+}
+
 /**
- * Executa `fn` como um papel da API, simulando a requisição do PostgREST.
- * A transação é sempre desfeita, para que cada verificação parta do mesmo estado.
+ * Executa `fn` com o papel e as claims informados, simulando a requisição do
+ * PostgREST. A transação é sempre desfeita, para que cada verificação parta
+ * do mesmo estado.
  */
 export async function runAs<T>(
   db: PGlite,
   role: Role,
-  userId: string | null,
+  claims: Claims,
   fn: (tx: Transaction) => Promise<T>,
 ): Promise<T> {
   let result: T;
   try {
     await db.transaction(async (tx) => {
-      const claims = JSON.stringify(userId ? { sub: userId, role } : { role });
-      await tx.query("select set_config('request.jwt.claims', $1, true)", [
-        claims,
-      ]);
-      await tx.exec(`set local role ${role}`);
+      await setSession(tx, role, claims);
       result = await fn(tx);
       await tx.rollback();
     });
@@ -66,7 +97,7 @@ export function asUser<T>(
   userId: string,
   fn: (tx: Transaction) => Promise<T>,
 ): Promise<T> {
-  return runAs(db, "authenticated", userId, fn);
+  return runAs(db, "authenticated", microsoftClaims(userId), fn);
 }
 
 /** Captura o erro de banco esperado; falha se a operação tiver sucesso. */

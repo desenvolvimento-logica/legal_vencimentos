@@ -13,8 +13,8 @@
 
 Para cada sessão:
 
-1. obter `auth.uid()` no servidor/banco;
-2. localizar `legal_profiles.user_id = auth.uid()`;
+1. obter o usuário da sessão por `legal_auth_uid()`, que retorna `auth.uid()` somente se o JWT indicar login Microsoft (`amr` com método `oauth` e `app_metadata.providers` contendo `azure`); qualquer outra sessão é tratada como sem perfil;
+2. localizar `legal_profiles.user_id = legal_auth_uid()`;
 3. exigir `active = true`;
 4. usar `id`, `email`, `hierarchy_level`, `manager_id` e `is_admin` desse perfil;
 5. nunca aceitar e-mail, papel ou perfil enviados pelo browser como autoridade.

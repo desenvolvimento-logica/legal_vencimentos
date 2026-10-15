@@ -6,7 +6,10 @@ import {
   asUser,
   createTestDb,
   expectDbError,
+  microsoftClaims,
+  passwordClaims,
   runAs,
+  setSession,
 } from "./test-db";
 
 // Usuários Auth (fixos para tornar os cenários legíveis).
@@ -117,10 +120,7 @@ beforeAll(async () => {
     [U.userB, C.ofB, (id: string) => (expirationOfB = id)],
   ] as const) {
     await db.transaction(async (tx) => {
-      await tx.query("select set_config('request.jwt.claims', $1, true)", [
-        JSON.stringify({ sub: userId, role: "authenticated" }),
-      ]);
-      await tx.exec("set local role authenticated");
+      await setSession(tx, "authenticated", microsoftClaims(userId));
       assign(await insertExpiration(tx, clientId));
     });
   }
@@ -171,7 +171,7 @@ describe("anon", () => {
       "legal_acessorias_requests",
       "legal_audit_logs",
     ]) {
-      const message = await runAs(db, "anon", null, (tx) =>
+      const message = await runAs(db, "anon", { role: "anon" }, (tx) =>
         expectDbError(tx.query(`select 1 from public.${table}`)),
       );
       expect(message).toMatch(/permission denied/);
@@ -179,10 +179,65 @@ describe("anon", () => {
   });
 
   it("não executa funções legal_", async () => {
-    const message = await runAs(db, "anon", null, (tx) =>
+    const message = await runAs(db, "anon", { role: "anon" }, (tx) =>
       expectDbError(tx.query("select public.legal_is_admin()")),
     );
     expect(message).toMatch(/permission denied/);
+  });
+});
+
+describe("somente sessões Microsoft", () => {
+  it("sessão por e-mail/senha do ADMIN não acessa nada", async () => {
+    const result = await runAs(
+      db,
+      "authenticated",
+      passwordClaims(U.admin),
+      async (tx) => {
+        const clients = await visibleClients(tx);
+        const { rows } = await tx.query<{
+          is_admin: boolean;
+          id: string | null;
+        }>(
+          "select public.legal_is_admin() as is_admin, public.legal_current_profile_id() as id",
+        );
+        const { rows: profiles } = await tx.query(
+          "select id from public.legal_profiles",
+        );
+        return { clients, ...rows[0], profiles: profiles.length };
+      },
+    );
+    expect(result).toEqual({
+      clients: [],
+      is_admin: false,
+      id: null,
+      profiles: 0,
+    });
+  });
+
+  it("sessão por senha não cria vencimentos", async () => {
+    const message = await runAs(
+      db,
+      "authenticated",
+      passwordClaims(U.userA),
+      (tx) => expectDbError(insertExpiration(tx, C.ofA)),
+    );
+    expect(message).toMatch(/ACCESS DENIED|row-level security/);
+  });
+
+  it("OAuth sem identidade azure não é reconhecido", async () => {
+    const claims = {
+      ...microsoftClaims(U.admin),
+      app_metadata: { provider: "google", providers: ["google"] },
+    };
+    const clients = await runAs(db, "authenticated", claims, visibleClients);
+    expect(clients).toEqual([]);
+  });
+
+  it("JWT sem amr não é reconhecido", async () => {
+    const claims = microsoftClaims(U.admin);
+    delete claims.amr;
+    const clients = await runAs(db, "authenticated", claims, visibleClients);
+    expect(clients).toEqual([]);
   });
 });
 
@@ -539,13 +594,18 @@ describe("solicitações, perfis e configurações", () => {
   });
 
   it("service_role escreve no cache de clientes (sincronização)", async () => {
-    const inserted = await runAs(db, "service_role", null, async (tx) => {
-      const result = await tx.query(
-        `insert into public.legal_clients (acessorias_company_id, corporate_name, synced_at)
+    const inserted = await runAs(
+      db,
+      "service_role",
+      { role: "service_role" },
+      async (tx) => {
+        const result = await tx.query(
+          `insert into public.legal_clients (acessorias_company_id, corporate_name, synced_at)
          values ('EMP-NOVA', 'Nova', now())`,
-      );
-      return result.affectedRows;
-    });
+        );
+        return result.affectedRows;
+      },
+    );
     expect(inserted).toBe(1);
   });
 });

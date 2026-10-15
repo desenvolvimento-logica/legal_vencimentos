@@ -315,6 +315,7 @@ Os arquivos também usam o prefixo do sistema: `legal_NNN_descricao.sql`.
 7. `legal_007_create_rls.sql`
 8. `legal_008_create_indexes.sql`
 9. `legal_009_seed_admin_profile.sql` — somente se o `auth.users` correspondente existir; deve ser idempotente.
+10. `legal_010_require_microsoft_session.sql` — exige sessão Microsoft nas funções de acesso.
 
 As migrations são aplicadas manualmente pelo responsável (SQL Editor), não por `supabase db push`, para não interferir no histórico de migrations dos outros sistemas. Toda migration deve ser idempotente quando seguro, pequena, revisável e acompanhada de caminho de rollback documentado. Não executar a migration contra o banco corporativo sem inspecionar o ambiente alvo.
 
@@ -338,4 +339,5 @@ Complementos às seções anteriores, implementados em `legal_006` e `legal_007`
 - **Payload de `legal_complete_renewal(old_id, payload)`:** `expiration_date` é obrigatório. `issue_date`, `document_name`, `document_number`, `issuer` e `notes` são opcionais. Cliente, tipo e responsável são herdados do anterior. A função é SECURITY INVOKER, então o RLS do chamador limita o que pode ser renovado.
 - **Hierarquia:** o trigger `legal_profiles_validate_hierarchy` aplica as regras de AUTHORIZATION.md §4. Escrita em `legal_profiles` pela API fica bloqueada até a Fase 8 (administração por RPC auditada).
 - **Privilégios:** os privilégios padrão do Supabase para `anon`/`authenticated` são revogados. `authenticated` recebe SELECT, e só em `legal_expirations` também INSERT e UPDATE. DELETE nunca é concedido.
+- **Somente sessões Microsoft (`legal_010`):** `legal_session_is_microsoft()` e `legal_auth_uid()` substituem `auth.uid()` nas funções de perfil e escopo e na policy de `legal_profiles`. Uma sessão por e-mail/senha do mesmo usuário não vê nem grava nada.
 - **Exclusão lógica (Fase 6):** como a policy de SELECT exige `deleted_at IS NULL`, um UPDATE com `RETURNING` que preencha `deleted_at` seria rejeitado. A exclusão lógica deve ser feita por RPC dedicada.

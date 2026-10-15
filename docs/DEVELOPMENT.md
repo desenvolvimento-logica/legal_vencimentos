@@ -206,9 +206,9 @@ Estado (15/10/2026): implementada. Validação automatizada: testes unitários, 
 - `src/proxy.ts`: renova a sessão (`getClaims`) e redireciona quem não está autenticado para `/login?next=…`. É só uma checagem otimista.
 - `src/lib/auth/session.ts` (DAL): `getSessionState()` (memoizado por requisição) e `requireProfile()`. Sem sessão, redireciona para `/login`. Com sessão mas sem perfil ativo, encerra a sessão via `/auth/signout?erro=sem-acesso`.
 - O layout `(dashboard)` envolve todo o conteúdo privado em `requireProfile()` dentro de `<Suspense>`, exigência do `cacheComponents` para leituras de cookies.
-- Login por Server Action: valida com Zod, devolve mensagem genérica para credenciais inválidas e encerra a sessão se o usuário não tiver perfil ativo. O destino `next` é validado contra open redirect (`safeNextPath`).
+- Login exclusivo com Microsoft: a Server Action `signInWithMicrosoft` inicia o OAuth (provedor `azure`, PKCE) e `/auth/callback` troca o código pela sessão. Se o usuário não tiver perfil ativo, a sessão é encerrada e ele volta ao login com a mensagem de sem acesso. O destino `next` é validado contra open redirect (`safeNextPath`).
+- No Supabase (Authentication → URL Configuration → Redirect URLs), liberar `http://localhost:3000/auth/callback` e `https://<domínio de produção>/auth/callback`. Não alterar a Site URL, que é compartilhada com outros sistemas.
 - Usuário inativo com sessão válida não lê dados (garantido pelo RLS) e é deslogado na próxima navegação.
-- O formulário de login usa `useActionState` com Server Action, sem React Hook Form: são dois campos e ele funciona mesmo antes do JavaScript carregar. React Hook Form entra nos formulários maiores (Fase 6).
 
 ### Fase 3 — Acessórias
 

@@ -172,7 +172,7 @@ Itens administrativos só aparecem para ADMIN. O item atual usa fundo dourado e 
 
 ### Login
 
-Painel institucional navy à esquerda e card de login à direita. Em viewport estreito, remover a divisão e manter logo compacto acima do card. Campos: e-mail e senha; ação principal “Entrar”. A recuperação de senha só deve ser funcional se o fluxo for implementado; caso contrário, não exibir link inativo.
+Painel institucional navy à esquerda e card de login à direita. Em viewport estreito, remover a divisão e manter logo compacto acima do card. O login é exclusivo com conta Microsoft: a ação principal é “Entrar com Microsoft”, com o logo oficial da Microsoft. Não há campos de e-mail e senha nem recuperação de senha (decisão de 15/10/2026; o mockup 01 é anterior a ela).
 
 ### Dashboard
 
