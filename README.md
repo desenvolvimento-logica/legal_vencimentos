@@ -4,7 +4,7 @@ Aplicação web interna para controlar certidões, licenças e certificados dos 
 
 ## Estado do projeto
 
-Fase 0 (setup) concluída: Next.js 16 com App Router e TypeScript estrito, Tailwind CSS 4, shadcn/ui, ESLint, Prettier, Vitest e validação de variáveis de ambiente. As próximas fases seguem a ordem de `docs/DEVELOPMENT.md`.
+Fases 0 (setup), 1 (banco) e 2 (autenticação) implementadas. O andamento de cada fase está em `docs/DEVELOPMENT.md`.
 
 ## Como executar
 
@@ -24,6 +24,8 @@ npm run dev                   # http://localhost:3000
 | `npm run lint` | ESLint |
 | `npm test` | Testes (Vitest), execução única |
 | `npm run format` / `format:check` | Prettier |
+| `npm run db:bundle` | Gera `supabase/apply/legal_apply.sql` para o SQL Editor |
+| `npm run db:types` | Regenera `src/types/database.ts` a partir das migrations |
 
 Antes de cada commit: `npm run typecheck && npm run lint && npm test && npm run format:check && npm run build`.
 

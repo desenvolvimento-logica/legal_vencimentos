@@ -12,10 +12,13 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:bundle": "node scripts/bundle-migrations.mjs"
+    "db:bundle": "node scripts/bundle-migrations.mjs",
+    "db:types": "vitest run supabase/tests/database-types.test.ts -u"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.2",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "lucide-react": "^1.57.0",

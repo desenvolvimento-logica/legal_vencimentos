@@ -183,7 +183,9 @@ Estado (15/10/2026): concluída. Versões adotadas: Next.js 16.4, React 19.3, Ta
 
 Saída: migrations revisadas, não destrutivas e testes de RLS executáveis. Não iniciar funcionalidades dependentes antes disso.
 
-Estado (15/10/2026): migrations `legal_001` a `legal_009` aplicadas em produção; o resultado de `legal_verify_schema.sql` coincide com o da validação local. Tipos TypeScript do schema ainda não gerados (ver questões em aberto).
+Estado (15/10/2026): migrations `legal_001` a `legal_009` aplicadas em produção; o resultado de `legal_verify_schema.sql` coincide com o da validação local.
+
+Tipos TypeScript: `src/types/database.ts` é gerado a partir das migrations aplicadas no PGlite (`npm run db:types`), no formato do `supabase gen types`, sem token nem acesso ao projeto real. O teste `supabase/tests/database-types.test.ts` falha se uma migration mudar e os tipos não forem regenerados.
 
 Testes de banco: `supabase/tests/` aplica as migrations duas vezes (idempotência) em um Postgres em memória ([PGlite](https://pglite.dev)) com um stub mínimo do Supabase (`supabase_stub.sql`: papéis `anon`/`authenticated`/`service_role`, privilégios padrão, `auth.users` e `auth.uid()`), e executa os cenários de acesso de `AUTHORIZATION.md` §9 trocando de papel e claims JWT. Rodam no `npm test` e nunca conectam ao banco real. O stub não reproduz todo o Supabase; a verificação em produção é feita com `supabase/inspect/legal_verify_schema.sql`.
 
@@ -198,6 +200,15 @@ Aplicação em produção (feita pelo responsável, no SQL Editor):
 - login, sessão, perfil ativo, logout e proteção de rotas;
 - guards server-side e navegação autorizada;
 - teste de usuário inativo e rotas privadas.
+
+Estado (15/10/2026): implementada. Validação automatizada: testes unitários, build e checagens HTTP contra o Supabase real (redirecionamentos e bloqueio de `anon` pela API REST). Validação manual do login com usuário real: pendente.
+
+- `src/proxy.ts`: renova a sessão (`getClaims`) e redireciona quem não está autenticado para `/login?next=…`. É só uma checagem otimista.
+- `src/lib/auth/session.ts` (DAL): `getSessionState()` (memoizado por requisição) e `requireProfile()`. Sem sessão, redireciona para `/login`. Com sessão mas sem perfil ativo, encerra a sessão via `/auth/signout?erro=sem-acesso`.
+- O layout `(dashboard)` envolve todo o conteúdo privado em `requireProfile()` dentro de `<Suspense>`, exigência do `cacheComponents` para leituras de cookies.
+- Login por Server Action: valida com Zod, devolve mensagem genérica para credenciais inválidas e encerra a sessão se o usuário não tiver perfil ativo. O destino `next` é validado contra open redirect (`safeNextPath`).
+- Usuário inativo com sessão válida não lê dados (garantido pelo RLS) e é deslogado na próxima navegação.
+- O formulário de login usa `useActionState` com Server Action, sem React Hook Form: são dois campos e ele funciona mesmo antes do JavaScript carregar. React Hook Form entra nos formulários maiores (Fase 6).
 
 ### Fase 3 — Acessórias
 
@@ -329,7 +340,6 @@ Estas questões não invalidam o escopo já definido, mas precisam ser resolvida
 6. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
 7. **Responsável do vencimento (RF-05):** "preencher automaticamente a partir do contexto autorizado" pode significar o usuário logado ou o perfil cujo e-mail é o responsável do cliente no Acessórias. Também falta definir quais valores de `responsible_user_id` são aceitos (AUTHORIZATION.md §9 exige rejeitar valores forjados). Bloqueia a Fase 6; hoje o banco aceita qualquer perfil existente.
 8. **Subordinados inativos no escopo:** a implementação mantém a carteira de um subordinado inativo visível ao gestor, para que não fique órfã. Confirmar se é o comportamento desejado.
-9. **Tipos TypeScript do schema:** `supabase gen types` exige um access token pessoal ou a connection string. Alternativa: manter os tipos à mão a partir das migrations. Decidir antes da Fase 2.
-10. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
+9. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
 
 Ao obter uma resposta, atualizar o documento técnico correspondente e remover a questão desta lista.
