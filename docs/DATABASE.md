@@ -316,6 +316,9 @@ Os arquivos também usam o prefixo do sistema: `legal_NNN_descricao.sql`.
 8. `legal_008_create_indexes.sql`
 9. `legal_009_seed_admin_profile.sql` — somente se o `auth.users` correspondente existir; deve ser idempotente.
 10. `legal_010_require_microsoft_session.sql` — exige sessão Microsoft nas funções de acesso.
+11. `legal_011_client_responsibles.sql` — responsáveis por departamento (5 e 13) definem a carteira.
+12. `legal_012_sync_lock.sql` — no máximo uma sincronização RUNNING por tipo.
+13. `legal_013_client_overview.sql` — view `legal_client_overview` (security_invoker) com agregados para a tela de clientes.
 
 As migrations são aplicadas manualmente pelo responsável (SQL Editor), não por `supabase db push`, para não interferir no histórico de migrations dos outros sistemas. Toda migration deve ser idempotente quando seguro, pequena, revisável e acompanhada de caminho de rollback documentado. Não executar a migration contra o banco corporativo sem inspecionar o ambiente alvo.
 

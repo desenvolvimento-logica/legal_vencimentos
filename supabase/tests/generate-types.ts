@@ -11,7 +11,8 @@ import { format, resolveConfig } from "prettier";
  */
 export async function generateDatabaseTypes(db: PGlite): Promise<string> {
   const enums = await loadEnums(db);
-  const tables = await loadTables(db);
+  const tables = await loadRelations(db, "r");
+  const views = await loadRelations(db, "v");
   const relationships = await loadRelationships(db);
   const functions = await loadFunctions(db);
 
@@ -53,6 +54,17 @@ export async function generateDatabaseTypes(db: PGlite): Promise<string> {
     }`;
   });
 
+  // Como no supabase gen types, colunas de views são sempre anuláveis.
+  const viewBlocks = Object.entries(views).map(([view, columns]) => {
+    const row = columns
+      .map((c) => `${c.name}: ${tsType(c.type, enums)} | null`)
+      .join("\n");
+    return `${view}: {
+      Row: {\n${row}\n}
+      Relationships: []
+    }`;
+  });
+
   const functionBlocks = functions.map((f) => {
     const args =
       f.args.length === 0
@@ -85,7 +97,9 @@ export type Database = {
     Tables: {
       ${tableBlocks.join("\n")}
     }
-    Views: { [_ in never]: never }
+    Views: {
+      ${viewBlocks.join("\n")}
+    }
     Functions: {
       ${functionBlocks.join("\n")}
     }
@@ -157,8 +171,12 @@ type Column = {
   hasDefault: boolean;
 };
 
-async function loadTables(db: PGlite): Promise<Record<string, Column[]>> {
-  const { rows } = await db.query<Column & { table: string }>(`
+async function loadRelations(
+  db: PGlite,
+  kind: "r" | "v",
+): Promise<Record<string, Column[]>> {
+  const { rows } = await db.query<Column & { table: string }>(
+    `
     select c.relname as table, a.attname as name, t.typname as type,
            not a.attnotnull as nullable,
            (a.atthasdef or a.attidentity <> '' or a.attgenerated <> '') as "hasDefault"
@@ -166,8 +184,10 @@ async function loadTables(db: PGlite): Promise<Record<string, Column[]>> {
     join pg_namespace n on n.oid = c.relnamespace
     join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
     join pg_type t on t.oid = a.atttypid
-    where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'legal\\_%'
-    order by c.relname, a.attname`);
+    where n.nspname = 'public' and c.relkind = $1 and c.relname like 'legal\\_%'
+    order by c.relname, a.attname`,
+    [kind],
+  );
   const tables: Record<string, Column[]> = {};
   for (const { table, ...column } of rows) {
     (tables[table] ??= []).push(column);

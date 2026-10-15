@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatLongDate } from "./dates";
+import { formatCivilDate, formatLongDate, toBusinessCivilDate } from "./dates";
 
 describe("formatLongDate", () => {
   it("formata por extenso em português", () => {
@@ -22,6 +22,30 @@ describe("formatLongDate", () => {
     );
     expect(formatLongDate(new Date("2027-01-01T03:00:00Z"))).toBe(
       "1 de janeiro de 2027",
+    );
+  });
+});
+
+describe("formatCivilDate", () => {
+  it("formata sem depender do fuso", () => {
+    expect(formatCivilDate("2026-01-01")).toBe("01/01/2026");
+  });
+
+  it.each([[null], [undefined], [""], ["2026-1-1"]])(
+    "vazio para %j",
+    (value) => {
+      expect(formatCivilDate(value)).toBe("");
+    },
+  );
+});
+
+describe("toBusinessCivilDate", () => {
+  it("usa o dia de São Paulo, não o de UTC", () => {
+    expect(toBusinessCivilDate(new Date("2026-10-16T02:30:00Z"))).toBe(
+      "2026-10-15",
+    );
+    expect(toBusinessCivilDate(new Date("2026-10-16T03:00:00Z"))).toBe(
+      "2026-10-16",
     );
   });
 });

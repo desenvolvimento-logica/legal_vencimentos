@@ -671,6 +671,49 @@ describe("solicitações, perfis e configurações", () => {
   });
 });
 
+describe("legal_client_overview", () => {
+  it("respeita o escopo do usuário (security_invoker)", async () => {
+    const ids = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.legal_client_overview order by id",
+      );
+      return rows.map((row) => row.id);
+    });
+    expect(ids).toEqual([C.ofA, C.shared].sort());
+  });
+
+  it("agrega os vencimentos visíveis e busca CNPJ só por dígitos", async () => {
+    const row = await asUser(db, U.userA, async (tx) => {
+      // Ajuste de dados como postgres; a consulta volta a ser do usuário A.
+      await tx.exec("reset role");
+      await tx.query(
+        "update public.legal_clients set document_number = '11.222.333/0001-81' where id = $1",
+        [C.ofA],
+      );
+      await setSession(tx, "authenticated", microsoftClaims(U.userA));
+      const { rows } = await tx.query<{
+        active_expirations: number;
+        overdue_expirations: number;
+      }>(
+        `select active_expirations, overdue_expirations
+         from public.legal_client_overview
+         where document_digits like '%' || $1 || '%'`,
+        ["11222333"],
+      );
+      return rows;
+    });
+    // O cliente A tem um vencimento ativo (criado no beforeAll).
+    expect(row).toEqual([{ active_expirations: 1, overdue_expirations: 0 }]);
+  });
+
+  it("anon não consulta a view", async () => {
+    const message = await runAs(db, "anon", { role: "anon" }, (tx) =>
+      expectDbError(tx.query("select 1 from public.legal_client_overview")),
+    );
+    expect(message).toMatch(/permission denied/);
+  });
+});
+
 describe("sincronização", () => {
   it("permite só uma execução RUNNING por integração e tipo", async () => {
     const message = await runAs(

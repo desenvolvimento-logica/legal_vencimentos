@@ -239,6 +239,12 @@ Bloqueio de fase: não avançar sem comprovar RLS pelas vias de acesso direto.
 - agregados de vencimentos por cliente;
 - estados loading/error/empty.
 
+Estado (15/10/2026): listagem `/clients` (mockup 03) implementada.
+- **Dados:** vêm da view `legal_client_overview` (`legal_013`, `security_invoker`), com agregados de vencimentos. Busca por razão social, nome fantasia e CNPJ (só dígitos), ordenação por lista fechada de colunas e paginação no servidor (10/20/50 por página).
+- **Estado na URL:** filtros e ordenação são links e formulários `GET`, que funcionam sem JavaScript. "Atualizar" recarrega do banco, sem disparar sincronização.
+- **TanStack Query:** ainda não usado, porque as telas atuais são Server Components com estado na URL. Entra quando houver estado de servidor no cliente (formulários e mutações da Fase 6).
+- **Pendente:** detalhe do cliente (mockup 04).
+
 ### Fase 6 — Vencimentos
 
 - criar, consultar, editar, filtrar e calcular display status;

@@ -475,7 +475,26 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: { [_ in never]: never };
+    Views: {
+      legal_client_overview: {
+        Row: {
+          acessorias_company_id: string | null;
+          active_expirations: number | null;
+          corporate_name: string | null;
+          document_digits: string | null;
+          document_number: string | null;
+          id: string | null;
+          legalization_responsible_email: string | null;
+          legalization_responsible_name: string | null;
+          next_expiration_date: string | null;
+          other_responsible_name: string | null;
+          overdue_expirations: number | null;
+          status: string | null;
+          trade_name: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       legal_auth_uid: { Args: never; Returns: string };
       legal_can_access_client: {
