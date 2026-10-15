@@ -243,6 +243,19 @@ describe("syncCompanies", () => {
     expect(second.counters).toMatchObject({ created: 0, updated: 4 });
     expect(store.clients.size).toBe(4);
   });
+
+  it("aplica a lista de responsáveis ignorados das configurações", async () => {
+    const store = new MemoryStore();
+    store.settings.set(SETTINGS.ignoredResponsibleEmails, [
+      " Fulana.Tal@Escritorio.Example ",
+    ]);
+    const { api } = makeApi(paged(companies(1)));
+
+    await syncCompanies({ api, store, now: () => NOW }, "full");
+
+    const [company] = store.clients.values();
+    expect(company.responsibles.map((r) => r.department_id)).toEqual(["13"]);
+  });
 });
 
 describe("syncUsers", () => {

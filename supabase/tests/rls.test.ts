@@ -173,7 +173,7 @@ describe("migrations", () => {
     const { rows } = await db.query(
       "select key from public.legal_settings order by key",
     );
-    expect(rows).toHaveLength(6);
+    expect(rows).toHaveLength(7);
   });
 });
 
@@ -651,7 +651,7 @@ describe("solicitações, perfis e configurações", () => {
       });
     expect(await count(U.userA)).toBe(0);
     expect(await count(U.director)).toBe(0);
-    expect(await count(U.admin)).toBe(6);
+    expect(await count(U.admin)).toBe(7);
   });
 
   it("service_role escreve no cache de clientes (sincronização)", async () => {

@@ -65,6 +65,7 @@ export interface SyncStore {
 export const SETTINGS = {
   departmentId: "acessorias_legalization_department_id",
   subdepartmentIds: "acessorias_legalization_subdepartment_ids",
+  ignoredResponsibleEmails: "acessorias_ignored_responsible_emails",
   requestWindowDays: "acessorias_request_initial_window_days",
   cursor: {
     companies: "last_successful_company_sync",

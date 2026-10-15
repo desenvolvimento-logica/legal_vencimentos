@@ -47,6 +47,22 @@ describe("mapCompany", () => {
     ]);
   });
 
+  it("desconsidera responsáveis da lista de ignorados (por e-mail)", () => {
+    const result = mapCompany(
+      acessoriasCompanySchema.parse(companyFixture),
+      {
+        ...DEPARTMENTS,
+        ignoredResponsibleEmails: new Set(["fulana.tal@escritorio.example"]),
+      },
+      SYNCED_AT,
+    );
+    // Fulana (depto 5) some; Beltrano (depto 13) continua.
+    expect(result.responsibles.map((r) => r.department_id)).toEqual(["13"]);
+    expect(result.client.legalization_department_id).toBeNull();
+    expect(result.client.legalization_responsible_name).toBeNull();
+    expect(result.client.legalization_responsible_email).toBeNull();
+  });
+
   it("empresa sem a Legalização fica sem responsáveis", () => {
     const result = mapCompany(
       acessoriasCompanySchema.parse({ ...companyFixture, Departamentos: [] }),

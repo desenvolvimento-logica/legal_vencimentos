@@ -11,6 +11,8 @@ import type {
 export type LegalizationDepartments = {
   primaryId: string;
   subdepartmentIds: string[];
+  /** E-mails normalizados que não contam como responsáveis (legal_014). */
+  ignoredResponsibleEmails?: ReadonlySet<string>;
 };
 
 export function normalizeEmail(value: string): string | null {
@@ -34,8 +36,11 @@ export function mapCompany(
     departments.primaryId,
     ...departments.subdepartmentIds,
   ]);
-  const relevant = company.Departamentos.filter((department) =>
-    relevantIds.has(department.ID),
+  const ignored = departments.ignoredResponsibleEmails;
+  const relevant = company.Departamentos.filter(
+    (department) =>
+      relevantIds.has(department.ID) &&
+      !ignored?.has(normalizeEmail(department.RespEmail) ?? ""),
   );
   const primary = relevant.find(
     (department) => department.ID === departments.primaryId,

@@ -319,6 +319,7 @@ Os arquivos também usam o prefixo do sistema: `legal_NNN_descricao.sql`.
 11. `legal_011_client_responsibles.sql` — responsáveis por departamento (5 e 13) definem a carteira.
 12. `legal_012_sync_lock.sql` — no máximo uma sincronização RUNNING por tipo.
 13. `legal_013_client_overview.sql` — view `legal_client_overview` (security_invoker) com agregados para a tela de clientes.
+14. `legal_014_ignored_responsibles.sql` — e-mails desconsiderados como responsáveis da Legalização (Evelin, Mariane e Monise; decisão de 15/10/2026). A sincronização remove esses responsáveis; a lista fica em `legal_settings.acessorias_ignored_responsible_emails`.
 
 As migrations são aplicadas manualmente pelo responsável (SQL Editor), não por `supabase db push`, para não interferir no histórico de migrations dos outros sistemas. Toda migration deve ser idempotente quando seguro, pequena, revisável e acompanhada de caminho de rollback documentado. Não executar a migration contra o banco corporativo sem inspecionar o ambiente alvo.
 

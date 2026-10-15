@@ -8,6 +8,7 @@ import {
   mapCompany,
   mapRequest,
   mapUser,
+  normalizeEmail,
   type LegalizationDepartments,
 } from "@/lib/acessorias/mappers";
 import { paginateAcessorias } from "@/lib/acessorias/paginate";
@@ -262,9 +263,15 @@ async function readDepartments(
     );
   }
   const subs = await store.getSetting(SETTINGS.subdepartmentIds);
+  const ignored = await store.getSetting(SETTINGS.ignoredResponsibleEmails);
   return {
     primaryId: String(primary),
     subdepartmentIds: Array.isArray(subs) ? subs.map(String) : [],
+    ignoredResponsibleEmails: new Set(
+      (Array.isArray(ignored) ? ignored : [])
+        .map((email) => normalizeEmail(String(email)))
+        .filter((email): email is string => email !== null),
+    ),
   };
 }
 
