@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 import { getPublicEnv } from "@/config/env";
 import type { Database } from "@/types/database";
@@ -11,6 +12,9 @@ import type { Database } from "@/types/database";
  * sujeito ao RLS. Criar um por requisição; nunca compartilhar entre usuários.
  */
 export async function createSupabaseServerClient() {
+  // A sessão é sempre dado da requisição. Sem isso, o Next acusa o Date.now()
+  // usado pelo getClaims() ao validar a expiração do token durante o prerender.
+  await connection();
   const cookieStore = await cookies();
   const env = getPublicEnv();
 
