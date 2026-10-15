@@ -43,6 +43,7 @@ Antes de cada commit: `npm run typecheck && npm run lint && npm test && npm run 
 - [Banco de dados](docs/DATABASE.md)
 - [Integração Acessórias](docs/ACESSORIAS.md)
 - [Autorização e RLS](docs/AUTHORIZATION.md)
+- [Mockups e sistema visual](docs/UI-MOCKUPS.md)
 - [Desenvolvimento e qualidade](docs/DEVELOPMENT.md)
 - [Instruções para agentes](CLAUDE.md)
 

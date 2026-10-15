@@ -11,6 +11,7 @@ Antes de qualquer tarefa substancial:
    - banco: `docs/DATABASE.md`;
    - Acessórias: `docs/ACESSORIAS.md`;
    - autenticação, hierarquia ou RLS: `docs/AUTHORIZATION.md`;
+   - interface e experiência visual: `docs/UI-MOCKUPS.md`;
    - setup, arquitetura, testes ou entrega: `docs/DEVELOPMENT.md`.
 3. Inspecione código, tipos e migrations existentes.
 4. Faça um plano curto e implemente somente o escopo solicitado.
