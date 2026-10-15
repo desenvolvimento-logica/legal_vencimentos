@@ -183,7 +183,7 @@ Estado (15/10/2026): concluída. Versões adotadas: Next.js 16.4, React 19.3, Ta
 
 Saída: migrations revisadas, não destrutivas e testes de RLS executáveis. Não iniciar funcionalidades dependentes antes disso.
 
-Estado (15/10/2026): migrations `legal_001` a `legal_009` escritas e validadas localmente; aplicação em produção pendente. Tipos TypeScript do schema ainda não gerados (ver questões em aberto).
+Estado (15/10/2026): migrations `legal_001` a `legal_009` aplicadas em produção; o resultado de `legal_verify_schema.sql` coincide com o da validação local. Tipos TypeScript do schema ainda não gerados (ver questões em aberto).
 
 Testes de banco: `supabase/tests/` aplica as migrations duas vezes (idempotência) em um Postgres em memória ([PGlite](https://pglite.dev)) com um stub mínimo do Supabase (`supabase_stub.sql`: papéis `anon`/`authenticated`/`service_role`, privilégios padrão, `auth.users` e `auth.uid()`), e executa os cenários de acesso de `AUTHORIZATION.md` §9 trocando de papel e claims JWT. Rodam no `npm test` e nunca conectam ao banco real. O stub não reproduz todo o Supabase; a verificação em produção é feita com `supabase/inspect/legal_verify_schema.sql`.
 
