@@ -1,0 +1,609 @@
+import type { PGlite, Transaction } from "@electric-sql/pglite";
+import { beforeAll, describe, expect, it } from "vitest";
+
+import {
+  applyMigrations,
+  asUser,
+  createTestDb,
+  expectDbError,
+  runAs,
+} from "./test-db";
+
+// Usuários Auth (fixos para tornar os cenários legíveis).
+const U = {
+  admin: "00000000-0000-4000-8000-000000000001",
+  director: "00000000-0000-4000-8000-000000000002",
+  coordinator: "00000000-0000-4000-8000-000000000003",
+  leader: "00000000-0000-4000-8000-000000000004",
+  userA: "00000000-0000-4000-8000-000000000005",
+  userB: "00000000-0000-4000-8000-000000000006",
+  inactive: "00000000-0000-4000-8000-000000000007",
+} as const;
+
+// Perfis.
+const P = {
+  director: "10000000-0000-4000-8000-000000000002",
+  coordinator: "10000000-0000-4000-8000-000000000003",
+  leader: "10000000-0000-4000-8000-000000000004",
+  userA: "10000000-0000-4000-8000-000000000005",
+  userB: "10000000-0000-4000-8000-000000000006",
+  inactive: "10000000-0000-4000-8000-000000000007",
+} as const;
+
+// Clientes.
+const C = {
+  ofA: "20000000-0000-4000-8000-00000000000a",
+  ofB: "20000000-0000-4000-8000-00000000000b",
+  ofInactive: "20000000-0000-4000-8000-00000000000c",
+  withoutResponsible: "20000000-0000-4000-8000-00000000000d",
+} as const;
+
+const ALL_CLIENTS = Object.values(C);
+
+let db: PGlite;
+let expirationOfA: string;
+let expirationOfB: string;
+
+async function visibleClients(tx: Transaction): Promise<string[]> {
+  const { rows } = await tx.query<{ id: string }>(
+    "select id from public.legal_clients order by id",
+  );
+  return rows.map((row) => row.id);
+}
+
+async function insertExpiration(
+  tx: Transaction,
+  clientId: string,
+  extra: Record<string, unknown> = {},
+): Promise<string> {
+  const values = {
+    client_id: clientId,
+    expiration_type: "CERTIDAO",
+    document_name: "CND Federal",
+    expiration_date: "2026-12-31",
+    ...extra,
+  };
+  const columns = Object.keys(values);
+  const params = columns.map((_, index) => `$${index + 1}`);
+  const { rows } = await tx.query<{ id: string }>(
+    `insert into public.legal_expirations (${columns.join(", ")})
+     values (${params.join(", ")}) returning id`,
+    Object.values(values),
+  );
+  return rows[0].id;
+}
+
+beforeAll(async () => {
+  db = await createTestDb();
+
+  await db.exec(`
+    insert into auth.users (id, email) values
+      ('${U.admin}', 'Desenvolvimento@EscritorioLogica.com.br '),
+      ('${U.director}', 'diretor@teste.local'),
+      ('${U.coordinator}', 'coordenador@teste.local'),
+      ('${U.leader}', 'lider@teste.local'),
+      ('${U.userA}', 'a@teste.local'),
+      ('${U.userB}', 'b@teste.local'),
+      ('${U.inactive}', 'inativo@teste.local');
+  `);
+
+  // Aplicar duas vezes comprova que as migrations são idempotentes.
+  await applyMigrations(db);
+  await applyMigrations(db);
+
+  await db.exec(`
+    insert into public.legal_profiles (id, user_id, name, email, hierarchy_level, manager_id, active) values
+      ('${P.director}', '${U.director}', 'Diretor', 'diretor@teste.local', 'DIRECTOR', null, true),
+      ('${P.coordinator}', '${U.coordinator}', 'Coordenador', 'coordenador@teste.local', 'COORDINATOR', null, true),
+      ('${P.leader}', '${U.leader}', 'Líder', 'lider@teste.local', 'LEADER', '${P.coordinator}', true),
+      ('${P.userA}', '${U.userA}', 'Usuário A', 'a@teste.local', 'USER', '${P.leader}', true),
+      ('${P.userB}', '${U.userB}', 'Usuário B', 'b@teste.local', 'USER', null, true),
+      ('${P.inactive}', '${U.inactive}', 'Inativo', 'inativo@teste.local', 'USER', '${P.leader}', false);
+
+    insert into public.legal_clients (id, acessorias_company_id, corporate_name, legalization_responsible_email, synced_at) values
+      ('${C.ofA}', 'EMP-A', 'Cliente A', 'a@teste.local', now()),
+      ('${C.ofB}', 'EMP-B', 'Cliente B', 'b@teste.local', now()),
+      ('${C.ofInactive}', 'EMP-I', 'Cliente Inativo', 'inativo@teste.local', now()),
+      ('${C.withoutResponsible}', 'EMP-N', 'Cliente sem responsável', null, now());
+
+    insert into public.legal_acessorias_requests (acessorias_request_id, acessorias_company_id, subject, synced_at) values
+      ('SOL-A', 'EMP-A', 'Solicitação do cliente A', now()),
+      ('SOL-B', 'EMP-B', 'Solicitação do cliente B', now());
+  `);
+
+  // Vencimentos são criados pelos próprios usuários (autoria vem da sessão).
+  for (const [userId, clientId, assign] of [
+    [U.userA, C.ofA, (id: string) => (expirationOfA = id)],
+    [U.userB, C.ofB, (id: string) => (expirationOfB = id)],
+  ] as const) {
+    await db.transaction(async (tx) => {
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: userId, role: "authenticated" }),
+      ]);
+      await tx.exec("set local role authenticated");
+      assign(await insertExpiration(tx, clientId));
+    });
+  }
+});
+
+describe("migrations", () => {
+  it("provisionam o ADMIN inicial com e-mail normalizado", async () => {
+    const { rows } = await db.query<{
+      email: string;
+      hierarchy_level: string;
+      is_admin: boolean;
+    }>(
+      `select email, hierarchy_level, is_admin from public.legal_profiles where user_id = $1`,
+      [U.admin],
+    );
+    expect(rows).toEqual([
+      {
+        email: "desenvolvimento@escritoriologica.com.br",
+        hierarchy_level: "ADMIN",
+        is_admin: true,
+      },
+    ]);
+  });
+
+  it("habilitam RLS em todas as tabelas legal_", async () => {
+    const { rows } = await db.query<{ relname: string }>(
+      `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'legal\\_%'
+         and not c.relrowsecurity`,
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it("criam as chaves iniciais de configuração", async () => {
+    const { rows } = await db.query(
+      "select key from public.legal_settings order by key",
+    );
+    expect(rows).toHaveLength(4);
+  });
+});
+
+describe("anon", () => {
+  it("não tem acesso a nenhuma tabela legal_", async () => {
+    for (const table of [
+      "legal_profiles",
+      "legal_clients",
+      "legal_expirations",
+      "legal_acessorias_requests",
+      "legal_audit_logs",
+    ]) {
+      const message = await runAs(db, "anon", null, (tx) =>
+        expectDbError(tx.query(`select 1 from public.${table}`)),
+      );
+      expect(message).toMatch(/permission denied/);
+    }
+  });
+
+  it("não executa funções legal_", async () => {
+    const message = await runAs(db, "anon", null, (tx) =>
+      expectDbError(tx.query("select public.legal_is_admin()")),
+    );
+    expect(message).toMatch(/permission denied/);
+  });
+});
+
+describe("escopo de clientes por hierarquia", () => {
+  it.each([
+    ["USER A vê somente a própria carteira", U.userA, [C.ofA]],
+    ["USER B vê somente a própria carteira", U.userB, [C.ofB]],
+    [
+      "LEADER vê seus USER diretos, inclusive inativos",
+      U.leader,
+      [C.ofA, C.ofInactive],
+    ],
+    ["COORDINATOR vê a árvore abaixo", U.coordinator, [C.ofA, C.ofInactive]],
+    ["DIRECTOR vê todos, inclusive sem responsável", U.director, ALL_CLIENTS],
+    ["ADMIN vê todos", U.admin, ALL_CLIENTS],
+    ["perfil inativo não vê nada", U.inactive, []],
+  ])("%s", async (_, userId, expected) => {
+    const visible = await asUser(db, userId, visibleClients);
+    expect(visible).toEqual([...expected].sort());
+  });
+
+  it("legal_can_access_client respeita o escopo", async () => {
+    const result = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query<{ own: boolean; other: boolean }>(
+        `select public.legal_can_access_client($1) as own,
+                public.legal_can_access_client($2) as other`,
+        [C.ofA, C.ofB],
+      );
+      return rows[0];
+    });
+    expect(result).toEqual({ own: true, other: false });
+  });
+});
+
+describe("vencimentos: acesso cruzado (USER A x USER B)", () => {
+  it("A não vê o vencimento de B nem conhecendo o UUID", async () => {
+    const rows = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query(
+        "select id from public.legal_expirations where id = $1",
+        [expirationOfB],
+      );
+      return rows;
+    });
+    expect(rows).toEqual([]);
+  });
+
+  it("A lista apenas os próprios vencimentos", async () => {
+    const ids = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.legal_expirations",
+      );
+      return rows.map((row) => row.id);
+    });
+    expect(ids).toEqual([expirationOfA]);
+  });
+
+  it("A não cria vencimento para cliente de B", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(insertExpiration(tx, C.ofB)),
+    );
+    expect(message).toMatch(/row-level security/);
+  });
+
+  it("A não move o próprio vencimento para cliente de B", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(
+        tx.query(
+          "update public.legal_expirations set client_id = $1 where id = $2",
+          [C.ofB, expirationOfA],
+        ),
+      ),
+    );
+    expect(message).toMatch(/row-level security/);
+  });
+
+  it("A não altera vencimento de B (nenhuma linha afetada)", async () => {
+    const affected = await asUser(db, U.userA, async (tx) => {
+      const result = await tx.query(
+        "update public.legal_expirations set notes = 'invasão' where id = $1",
+        [expirationOfB],
+      );
+      return result.affectedRows;
+    });
+    expect(affected).toBe(0);
+  });
+
+  it("autoria forjada é substituída pela sessão", async () => {
+    const createdBy = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA, {
+        created_by: P.userB,
+        updated_by: P.userB,
+      });
+      const { rows } = await tx.query<{ created_by: string }>(
+        "select created_by from public.legal_expirations where id = $1",
+        [id],
+      );
+      return rows[0].created_by;
+    });
+    expect(createdBy).toBe(P.userA);
+  });
+
+  it("DELETE físico é negado", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(
+        tx.query("delete from public.legal_expirations where id = $1", [
+          expirationOfA,
+        ]),
+      ),
+    );
+    expect(message).toMatch(/permission denied/);
+  });
+
+  it("perfil inativo com sessão válida não cria vencimentos", async () => {
+    const message = await asUser(db, U.inactive, (tx) =>
+      expectDbError(insertExpiration(tx, C.ofInactive)),
+    );
+    expect(message).toMatch(/ACCESS DENIED|row-level security/);
+  });
+});
+
+describe("vencimentos: integridade da renovação", () => {
+  it("novo vencimento não pode nascer RENEWED nem apontar para anterior", async () => {
+    const asRenewed = await asUser(db, U.userA, (tx) =>
+      expectDbError(insertExpiration(tx, C.ofA, { status: "RENEWING" })),
+    );
+    expect(asRenewed).toMatch(/iniciar como ACTIVE/);
+
+    const withPrevious = await asUser(db, U.userA, (tx) =>
+      expectDbError(
+        insertExpiration(tx, C.ofA, { previous_expiration_id: expirationOfA }),
+      ),
+    );
+    expect(withPrevious).toMatch(/legal_complete_renewal/);
+  });
+
+  it("não marca RENEWED por UPDATE direto", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(
+        tx.query(
+          "update public.legal_expirations set status = 'RENEWED', renewed_at = now() where id = $1",
+          [expirationOfA],
+        ),
+      ),
+    );
+    expect(message).toMatch(/legal_complete_renewal/);
+  });
+
+  it("conclui a renovação atomicamente e preserva o histórico", async () => {
+    const outcome = await asUser(db, U.userA, async (tx) => {
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [expirationOfA],
+      );
+      const { rows: created } = await tx.query<{
+        id: string;
+        status: string;
+        previous_expiration_id: string;
+        expiration_date: Date;
+        document_name: string;
+        created_by: string;
+      }>("select * from public.legal_complete_renewal($1, $2::jsonb)", [
+        expirationOfA,
+        JSON.stringify({ expiration_date: "2027-12-31" }),
+      ]);
+      const { rows: old } = await tx.query<{
+        status: string;
+        expiration_date: Date;
+        renewed_at: Date | null;
+      }>(
+        "select status, expiration_date, renewed_at from public.legal_expirations where id = $1",
+        [expirationOfA],
+      );
+      const repeated = await expectDbError(
+        tx.query("select public.legal_complete_renewal($1, $2::jsonb)", [
+          expirationOfA,
+          JSON.stringify({ expiration_date: "2028-12-31" }),
+        ]),
+      );
+      return { created: created[0], old: old[0], repeated };
+    });
+
+    expect(outcome.created).toMatchObject({
+      status: "ACTIVE",
+      previous_expiration_id: expirationOfA,
+      document_name: "CND Federal",
+      created_by: P.userA,
+    });
+    expect(outcome.created.expiration_date.toISOString()).toMatch(
+      /^2027-12-31/,
+    );
+    expect(outcome.old.status).toBe("RENEWED");
+    expect(outcome.old.renewed_at).not.toBeNull();
+    // A data do registro anterior nunca é alterada pela renovação.
+    expect(outcome.old.expiration_date.toISOString()).toMatch(/^2026-12-31/);
+    expect(outcome.repeated).toMatch(/precisa estar em renovação/);
+  });
+
+  it("vencimento RENEWED não pode ser editado", async () => {
+    const message = await asUser(db, U.userA, async (tx) => {
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [expirationOfA],
+      );
+      await tx.query("select public.legal_complete_renewal($1, $2::jsonb)", [
+        expirationOfA,
+        JSON.stringify({ expiration_date: "2027-12-31" }),
+      ]);
+      return expectDbError(
+        tx.query(
+          "update public.legal_expirations set expiration_date = '2030-01-01' where id = $1",
+          [expirationOfA],
+        ),
+      );
+    });
+    expect(message).toMatch(/não pode ser alterado/);
+  });
+
+  it("B não conclui a renovação de vencimento de A", async () => {
+    const message = await asUser(db, U.userB, (tx) =>
+      expectDbError(
+        tx.query("select public.legal_complete_renewal($1, $2::jsonb)", [
+          expirationOfA,
+          JSON.stringify({ expiration_date: "2027-12-31" }),
+        ]),
+      ),
+    );
+    expect(message).toMatch(/não encontrado/);
+  });
+
+  it("rejeita payload sem nova data", async () => {
+    const message = await asUser(db, U.userA, async (tx) => {
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [expirationOfA],
+      );
+      return expectDbError(
+        tx.query("select public.legal_complete_renewal($1, '{}'::jsonb)", [
+          expirationOfA,
+        ]),
+      );
+    });
+    expect(message).toMatch(/obrigatória/);
+  });
+});
+
+describe("auditoria", () => {
+  it("registra criação e renovação com autor da sessão", async () => {
+    const actions = await asUser(db, U.userA, async (tx) => {
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [expirationOfA],
+      );
+      await tx.query("select public.legal_complete_renewal($1, $2::jsonb)", [
+        expirationOfA,
+        JSON.stringify({ expiration_date: "2027-12-31" }),
+      ]);
+      // Leitura como postgres dentro da mesma transação (auditoria é só ADMIN).
+      await tx.exec("reset role");
+      const { rows } = await tx.query<{ action: string; user_id: string }>(
+        `select action, user_id from public.legal_audit_logs
+         where entity_id = $1 or new_data ->> 'previous_expiration_id' = $1::text
+         order by created_at, action`,
+        [expirationOfA],
+      );
+      return rows;
+    });
+    expect(actions.map((row) => row.action).sort()).toEqual(
+      [
+        "EXPIRATION_CREATED",
+        "EXPIRATION_RENEWAL_CREATED",
+        "EXPIRATION_RENEWAL_STARTED",
+        "EXPIRATION_RENEWED",
+      ].sort(),
+    );
+    expect(new Set(actions.map((row) => row.user_id))).toEqual(
+      new Set([P.userA]),
+    );
+  });
+
+  it("USER não lê auditoria; ADMIN lê", async () => {
+    const forUser = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query("select id from public.legal_audit_logs");
+      return rows.length;
+    });
+    const forAdmin = await asUser(db, U.admin, async (tx) => {
+      const { rows } = await tx.query("select id from public.legal_audit_logs");
+      return rows.length;
+    });
+    expect(forUser).toBe(0);
+    expect(forAdmin).toBeGreaterThan(0);
+  });
+
+  it("usuário não grava auditoria diretamente", async () => {
+    const message = await asUser(db, U.admin, (tx) =>
+      expectDbError(
+        tx.query(
+          `insert into public.legal_audit_logs (user_id, action, entity_type, entity_id)
+           values ($1, 'FAKE', 'x', $1)`,
+          [P.userA],
+        ),
+      ),
+    );
+    expect(message).toMatch(/permission denied/);
+  });
+});
+
+describe("solicitações, perfis e configurações", () => {
+  it("solicitações seguem o escopo do cliente", async () => {
+    const subjects = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query<{ acessorias_request_id: string }>(
+        "select acessorias_request_id from public.legal_acessorias_requests",
+      );
+      return rows.map((row) => row.acessorias_request_id);
+    });
+    expect(subjects).toEqual(["SOL-A"]);
+  });
+
+  it("USER lê apenas o próprio perfil e não é admin", async () => {
+    const result = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.legal_profiles",
+      );
+      const { rows: admin } = await tx.query<{ is_admin: boolean }>(
+        "select public.legal_is_admin() as is_admin",
+      );
+      return { ids: rows.map((row) => row.id), isAdmin: admin[0].is_admin };
+    });
+    expect(result).toEqual({ ids: [P.userA], isAdmin: false });
+  });
+
+  it("USER não altera o próprio perfil para ADMIN", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(
+        tx.query(
+          "update public.legal_profiles set hierarchy_level = 'ADMIN', is_admin = true where user_id = $1",
+          [U.userA],
+        ),
+      ),
+    );
+    expect(message).toMatch(/permission denied/);
+  });
+
+  it("configurações e logs de sincronização são só do ADMIN", async () => {
+    const count = async (userId: string) =>
+      asUser(db, userId, async (tx) => {
+        const { rows } = await tx.query(
+          "select key from public.legal_settings",
+        );
+        return rows.length;
+      });
+    expect(await count(U.userA)).toBe(0);
+    expect(await count(U.director)).toBe(0);
+    expect(await count(U.admin)).toBe(4);
+  });
+
+  it("service_role escreve no cache de clientes (sincronização)", async () => {
+    const inserted = await runAs(db, "service_role", null, async (tx) => {
+      const result = await tx.query(
+        `insert into public.legal_clients (acessorias_company_id, corporate_name, synced_at)
+         values ('EMP-NOVA', 'Nova', now())`,
+      );
+      return result.affectedRows;
+    });
+    expect(inserted).toBe(1);
+  });
+});
+
+describe("validação da hierarquia", () => {
+  const rejects = async (sql: string) =>
+    expectDbError(
+      db.transaction(async (tx) => {
+        await tx.exec(sql);
+      }),
+    );
+
+  it("rejeita autogestão", async () => {
+    expect(
+      await rejects(
+        `update public.legal_profiles set manager_id = id where id = '${P.userB}'`,
+      ),
+    ).toMatch(/manager_not_self|acima/);
+  });
+
+  it("rejeita gestor de nível igual ou inferior", async () => {
+    expect(
+      await rejects(
+        `update public.legal_profiles set manager_id = '${P.userA}' where id = '${P.userB}'`,
+      ),
+    ).toMatch(/acima do subordinado/);
+  });
+
+  it("rejeita gestor inativo", async () => {
+    expect(
+      await rejects(
+        `update public.legal_profiles set hierarchy_level = 'LEADER', manager_id = '${P.coordinator}' where id = '${P.inactive}';
+         update public.legal_profiles set manager_id = '${P.inactive}' where id = '${P.userB}'`,
+      ),
+    ).toMatch(/inativo/);
+  });
+
+  it("rejeita rebaixar gestor abaixo dos subordinados", async () => {
+    expect(
+      await rejects(
+        `update public.legal_profiles set hierarchy_level = 'USER' where id = '${P.leader}'`,
+      ),
+    ).toMatch(/incompatível com os subordinados/);
+  });
+
+  it("rejeita ADMIN na árvore operacional", async () => {
+    expect(
+      await rejects(
+        `update public.legal_profiles set manager_id = '${P.director}' where user_id = '${U.admin}'`,
+      ),
+    ).toMatch(/ADMIN/);
+  });
+
+  it("rejeita is_admin inconsistente com o nível", async () => {
+    expect(
+      await rejects(
+        `update public.legal_profiles set is_admin = true where id = '${P.userB}'`,
+      ),
+    ).toMatch(/admin_consistent/);
+  });
+});

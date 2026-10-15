@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     // Componentes React podem optar por jsdom com `// @vitest-environment jsdom`.
     environment: "node",
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "supabase/tests/**/*.test.ts"],
+    // O PGlite inicializa um Postgres em WebAssembly por arquivo de teste.
+    hookTimeout: 60_000,
   },
 });

@@ -326,3 +326,16 @@ As migrations são aplicadas manualmente pelo responsável (SQL Editor), não po
 - Dados importados usam upsert controlado e nunca removem vencimentos vinculados.
 - O cursor de sincronização só muda no commit de uma execução `SUCCESS`.
 - O estado `PARTIAL` conserva detalhes das falhas e não avança o cursor global.
+
+## 9. Decisões de implementação (Fase 1)
+
+Complementos às seções anteriores, implementados em `legal_006` e `legal_007`:
+
+- **Funções auxiliares adicionais:** `legal_current_profile_id()`, `legal_has_global_scope()` (DIRECTOR/ADMIN) e `legal_scope_emails()`. As policies de `legal_clients` usam `legal_scope_emails()`. As de vencimentos e solicitações herdam o escopo por `exists` em `legal_clients`, cuja subconsulta também passa pelo RLS.
+- **Autoria derivada da sessão:** o trigger `legal_expirations_before_write` sobrescreve `created_by`/`updated_by` com o perfil ativo e rejeita escrita sem perfil ativo. Também torna imutáveis `id`, `created_by`, `created_at` e `previous_expiration_id`.
+- **Proteção da cadeia:** vencimento novo nasce `ACTIVE`. `RENEWED`, `renewed_at` e `previous_expiration_id` só são gravados dentro de `legal_complete_renewal`, por meio do contexto transacional `legal.renewal_context`, que não é alcançável pela API REST. Um vencimento `RENEWED` não pode mais ser editado. Um índice único parcial garante no máximo um sucessor. Ciclos são impossíveis: o anterior precisa existir antes do sucessor, e o vínculo é imutável.
+- **Auditoria por trigger:** `legal_expirations_audit` (SECURITY DEFINER) grava toda inserção e alteração de vencimento. Ações: `EXPIRATION_CREATED`, `EXPIRATION_UPDATED`, `EXPIRATION_RESPONSIBLE_CHANGED`, `EXPIRATION_RENEWAL_STARTED`, `EXPIRATION_RENEWED`, `EXPIRATION_RENEWAL_CREATED`, `EXPIRATION_CANCELLED`, `EXPIRATION_STATUS_CHANGED` e `EXPIRATION_DELETED`. Usuários não têm privilégio de INSERT em `legal_audit_logs`.
+- **Payload de `legal_complete_renewal(old_id, payload)`:** `expiration_date` é obrigatório. `issue_date`, `document_name`, `document_number`, `issuer` e `notes` são opcionais. Cliente, tipo e responsável são herdados do anterior. A função é SECURITY INVOKER, então o RLS do chamador limita o que pode ser renovado.
+- **Hierarquia:** o trigger `legal_profiles_validate_hierarchy` aplica as regras de AUTHORIZATION.md §4. Escrita em `legal_profiles` pela API fica bloqueada até a Fase 8 (administração por RPC auditada).
+- **Privilégios:** os privilégios padrão do Supabase para `anon`/`authenticated` são revogados. `authenticated` recebe SELECT, e só em `legal_expirations` também INSERT e UPDATE. DELETE nunca é concedido.
+- **Exclusão lógica (Fase 6):** como a policy de SELECT exige `deleted_at IS NULL`, um UPDATE com `RETURNING` que preencha `deleted_at` seria rejeitado. A exclusão lógica deve ser feita por RPC dedicada.

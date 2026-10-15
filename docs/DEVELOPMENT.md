@@ -172,7 +172,7 @@ Busca textual usa debounce. Respostas incluem itens, página, tamanho da página
 
 Saída: aplicação mínima compila, lint/typecheck passam e nenhum secret está presente.
 
-Estado (15/10/2026): concluída. Versões adotadas: Next.js 16.4, React 19.3, Tailwind 4, shadcn/ui (preset `base-nova`, primitivas `@base-ui/react`), Zod 4, Vitest 5, Node 24. A validação de ambiente está em `src/config/env.ts` (pública) e `src/config/env.server.ts` (`server-only`); hoje ela é preguiçosa, executada no primeiro uso. A validação no boot (via `instrumentation.ts`) entra na Fase 1, quando houver valores reais em `.env.local`, para não bloquear o desenvolvimento antes disso.
+Estado (15/10/2026): concluída. Versões adotadas: Next.js 16.4, React 19.3, Tailwind 4, shadcn/ui (preset `base-nova`, primitivas `@base-ui/react`), Zod 4, Vitest 5, Node 24. A validação de ambiente está em `src/config/env.ts` (pública) e `src/config/env.server.ts` (`server-only`); as variáveis públicas são validadas no boot do servidor (`src/instrumentation.ts`), e as secretas no primeiro uso server-side, já que só são necessárias a partir da Fase 3.
 
 ### Fase 1 — Banco
 
@@ -182,6 +182,16 @@ Estado (15/10/2026): concluída. Versões adotadas: Next.js 16.4, React 19.3, Ta
 - gerar tipos TypeScript do schema.
 
 Saída: migrations revisadas, não destrutivas e testes de RLS executáveis. Não iniciar funcionalidades dependentes antes disso.
+
+Estado (15/10/2026): migrations `legal_001` a `legal_009` escritas e validadas localmente; aplicação em produção pendente. Tipos TypeScript do schema ainda não gerados (ver questões em aberto).
+
+Testes de banco: `supabase/tests/` aplica as migrations duas vezes (idempotência) em um Postgres em memória ([PGlite](https://pglite.dev)) com um stub mínimo do Supabase (`supabase_stub.sql`: papéis `anon`/`authenticated`/`service_role`, privilégios padrão, `auth.users` e `auth.uid()`), e executa os cenários de acesso de `AUTHORIZATION.md` §9 trocando de papel e claims JWT. Rodam no `npm test` e nunca conectam ao banco real. O stub não reproduz todo o Supabase; a verificação em produção é feita com `supabase/inspect/legal_verify_schema.sql`.
+
+Aplicação em produção (feita pelo responsável, no SQL Editor):
+
+1. `npm run db:bundle` gera `supabase/apply/legal_apply.sql` (não versionado), com todas as migrations em uma transação única. Para um intervalo: `npm run db:bundle -- legal_010 legal_012`.
+2. Colar e executar o arquivo no SQL Editor.
+3. Executar `supabase/inspect/legal_verify_schema.sql` e conferir o JSON.
 
 ### Fase 2 — Autenticação
 
@@ -313,10 +323,13 @@ Estas questões não invalidam o escopo já definido, mas precisam ser resolvida
 
 1. Quais são os caminhos, parâmetros, limites e schemas exatos dos endpoints de empresas, usuários, departamentos e listagem de solicitações do Acessórias?
 2. Quais transições de status são permitidas (por exemplo, `RENEWING` pode voltar a `ACTIVE`? de quais estados se pode cancelar?) e qual a política de edição/cancelamento/exclusão lógica por nível, além da regra geral de escopo? Adiado pelo responsável em 15/10/2026; bloqueia a Fase 6.
-3. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados?
+3. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados? Proposta aplicada nas migrations, sujeita a revisão: nomes e órgão emissor até 200 caracteres, número do documento até 100, observações até 2000.
 4. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
 5. Qual ambiente e processo executarão sincronizações automáticas e com qual frequência?
 6. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
-7. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
+7. **Responsável do vencimento (RF-05):** "preencher automaticamente a partir do contexto autorizado" pode significar o usuário logado ou o perfil cujo e-mail é o responsável do cliente no Acessórias. Também falta definir quais valores de `responsible_user_id` são aceitos (AUTHORIZATION.md §9 exige rejeitar valores forjados). Bloqueia a Fase 6; hoje o banco aceita qualquer perfil existente.
+8. **Subordinados inativos no escopo:** a implementação mantém a carteira de um subordinado inativo visível ao gestor, para que não fique órfã. Confirmar se é o comportamento desejado.
+9. **Tipos TypeScript do schema:** `supabase gen types` exige um access token pessoal ou a connection string. Alternativa: manter os tipos à mão a partir das migrations. Decidir antes da Fase 2.
+10. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
 
 Ao obter uma resposta, atualizar o documento técnico correspondente e remover a questão desta lista.
