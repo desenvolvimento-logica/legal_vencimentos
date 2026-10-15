@@ -155,6 +155,53 @@ export type Database = {
           },
         ];
       };
+      legal_client_responsibles: {
+        Row: {
+          client_id: string;
+          created_at: string;
+          department_id: string;
+          department_name: string | null;
+          id: string;
+          responsible_acessorias_user_id: string | null;
+          responsible_email: string | null;
+          responsible_name: string | null;
+          synced_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          created_at?: string;
+          department_id: string;
+          department_name?: string | null;
+          id?: string;
+          responsible_acessorias_user_id?: string | null;
+          responsible_email?: string | null;
+          responsible_name?: string | null;
+          synced_at: string;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          created_at?: string;
+          department_id?: string;
+          department_name?: string | null;
+          id?: string;
+          responsible_acessorias_user_id?: string | null;
+          responsible_email?: string | null;
+          responsible_name?: string | null;
+          synced_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "legal_client_responsibles_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "legal_clients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       legal_clients: {
         Row: {
           acessorias_company_id: string;
@@ -449,6 +496,7 @@ export type Database = {
       legal_is_admin: { Args: never; Returns: boolean };
       legal_scope_emails: { Args: never; Returns: string[] };
       legal_session_is_microsoft: { Args: never; Returns: boolean };
+      legal_visible_client_ids: { Args: never; Returns: string[] };
     };
     Enums: {
       legal_expiration_status:

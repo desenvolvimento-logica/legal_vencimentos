@@ -39,6 +39,10 @@ const C = {
   ofB: "20000000-0000-4000-8000-00000000000b",
   ofInactive: "20000000-0000-4000-8000-00000000000c",
   withoutResponsible: "20000000-0000-4000-8000-00000000000d",
+  // Legalização (5) com A e Certificado Digital (13) com B.
+  shared: "20000000-0000-4000-8000-00000000000e",
+  // Só o subdepartamento 13, com B.
+  certificateOfB: "20000000-0000-4000-8000-00000000000f",
 } as const;
 
 const ALL_CLIENTS = Object.values(C);
@@ -103,11 +107,22 @@ beforeAll(async () => {
       ('${P.userB}', '${U.userB}', 'Usuário B', 'b@teste.local', 'USER', null, true),
       ('${P.inactive}', '${U.inactive}', 'Inativo', 'inativo@teste.local', 'USER', '${P.leader}', false);
 
-    insert into public.legal_clients (id, acessorias_company_id, corporate_name, legalization_responsible_email, synced_at) values
-      ('${C.ofA}', 'EMP-A', 'Cliente A', 'a@teste.local', now()),
-      ('${C.ofB}', 'EMP-B', 'Cliente B', 'b@teste.local', now()),
-      ('${C.ofInactive}', 'EMP-I', 'Cliente Inativo', 'inativo@teste.local', now()),
-      ('${C.withoutResponsible}', 'EMP-N', 'Cliente sem responsável', null, now());
+    insert into public.legal_clients (id, acessorias_company_id, corporate_name, synced_at) values
+      ('${C.ofA}', 'EMP-A', 'Cliente A', now()),
+      ('${C.ofB}', 'EMP-B', 'Cliente B', now()),
+      ('${C.ofInactive}', 'EMP-I', 'Cliente Inativo', now()),
+      ('${C.withoutResponsible}', 'EMP-N', 'Cliente sem responsável', now()),
+      ('${C.shared}', 'EMP-S', 'Cliente compartilhado', now()),
+      ('${C.certificateOfB}', 'EMP-C', 'Cliente de certificado', now());
+
+    -- A carteira vem dos responsáveis por departamento (legal_011).
+    insert into public.legal_client_responsibles (client_id, department_id, responsible_email, synced_at) values
+      ('${C.ofA}', '5', 'a@teste.local', now()),
+      ('${C.ofB}', '5', 'b@teste.local', now()),
+      ('${C.ofInactive}', '5', 'inativo@teste.local', now()),
+      ('${C.shared}', '5', 'a@teste.local', now()),
+      ('${C.shared}', '13', 'b@teste.local', now()),
+      ('${C.certificateOfB}', '13', 'b@teste.local', now());
 
     insert into public.legal_acessorias_requests (acessorias_request_id, acessorias_company_id, subject, synced_at) values
       ('SOL-A', 'EMP-A', 'Solicitação do cliente A', now()),
@@ -158,7 +173,7 @@ describe("migrations", () => {
     const { rows } = await db.query(
       "select key from public.legal_settings order by key",
     );
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(6);
   });
 });
 
@@ -243,14 +258,22 @@ describe("somente sessões Microsoft", () => {
 
 describe("escopo de clientes por hierarquia", () => {
   it.each([
-    ["USER A vê somente a própria carteira", U.userA, [C.ofA]],
-    ["USER B vê somente a própria carteira", U.userB, [C.ofB]],
+    ["USER A vê somente a própria carteira", U.userA, [C.ofA, C.shared]],
+    [
+      "USER B vê a carteira nos departamentos 5 e 13",
+      U.userB,
+      [C.ofB, C.shared, C.certificateOfB],
+    ],
     [
       "LEADER vê seus USER diretos, inclusive inativos",
       U.leader,
-      [C.ofA, C.ofInactive],
+      [C.ofA, C.ofInactive, C.shared],
     ],
-    ["COORDINATOR vê a árvore abaixo", U.coordinator, [C.ofA, C.ofInactive]],
+    [
+      "COORDINATOR vê a árvore abaixo",
+      U.coordinator,
+      [C.ofA, C.ofInactive, C.shared],
+    ],
     ["DIRECTOR vê todos, inclusive sem responsável", U.director, ALL_CLIENTS],
     ["ADMIN vê todos", U.admin, ALL_CLIENTS],
     ["perfil inativo não vê nada", U.inactive, []],
@@ -269,6 +292,44 @@ describe("escopo de clientes por hierarquia", () => {
       return rows[0];
     });
     expect(result).toEqual({ own: true, other: false });
+  });
+
+  it("responsáveis visíveis seguem o escopo do cliente", async () => {
+    const rows = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query<{
+        client_id: string;
+        department_id: string;
+      }>(
+        `select client_id, department_id from public.legal_client_responsibles
+         order by client_id, department_id`,
+      );
+      return rows;
+    });
+    // A vê os dois responsáveis do cliente compartilhado, inclusive o de B.
+    expect(rows).toEqual(
+      [
+        { client_id: C.ofA, department_id: "5" },
+        { client_id: C.shared, department_id: "13" },
+        { client_id: C.shared, department_id: "5" },
+      ].sort((x, y) =>
+        (x.client_id + x.department_id).localeCompare(
+          y.client_id + y.department_id,
+        ),
+      ),
+    );
+  });
+
+  it("usuário não escreve responsáveis (só a sincronização)", async () => {
+    const message = await asUser(db, U.admin, (tx) =>
+      expectDbError(
+        tx.query(
+          `insert into public.legal_client_responsibles (client_id, department_id, responsible_email, synced_at)
+           values ($1, '13', 'a@teste.local', now())`,
+          [C.ofB],
+        ),
+      ),
+    );
+    expect(message).toMatch(/permission denied/);
   });
 });
 
@@ -590,7 +651,7 @@ describe("solicitações, perfis e configurações", () => {
       });
     expect(await count(U.userA)).toBe(0);
     expect(await count(U.director)).toBe(0);
-    expect(await count(U.admin)).toBe(4);
+    expect(await count(U.admin)).toBe(6);
   });
 
   it("service_role escreve no cache de clientes (sincronização)", async () => {
