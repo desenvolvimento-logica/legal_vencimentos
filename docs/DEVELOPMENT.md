@@ -411,6 +411,21 @@ Revisão independente do código e das regras do banco (`legal_001`–`legal_018
 | 7 | A checagem "só Microsoft" aceita qualquer OAuth de usuário com identidade azure | Conferido: só os provedores `azure` e `email` estão ativos, e o Azure usa a URL do tenant do escritório. **Não habilitar outros provedores OAuth no projeto compartilhado sem revisar `legal_session_is_microsoft`** |
 | 8 | `GET /auth/signout` pode ser disparado por outro site (logout) | Aceito: só encerra a própria sessão |
 
+## 12.2 Desempenho (16/10/2026)
+
+Medido em produção com `supabase/inspect/legal_inspect_performance.sql` (`EXPLAIN ANALYZE` com RLS, simulando a sessão Microsoft do USER com a maior carteira, 1.140 clientes, e do ADMIN). Todas as consultas das telas ficaram entre 0,4 e 42 ms; nenhuma precisa de índice.
+
+| Consulta | USER | ADMIN |
+| --- | --- | --- |
+| Clientes: contagem + página 1 | 20 + 42 ms | 10 + 20 ms |
+| Clientes: busca por razão / CNPJ | 13 / 15 ms | 13 / 15 ms |
+| Vencimentos: vigentes / busca | 17 / 18 ms | 18 / 19 ms |
+| Dashboard: indicadores | 1–9 ms | 0,4–10 ms |
+| Solicitações de um cliente | 33 ms | 20 ms |
+
+- **Gargalo era a rede:** as funções da Vercel rodavam em `iad1` e o banco fica em us-east-2, com várias consultas em sequência por página. As funções foram movidas para `cle1`.
+- **Ponto de atenção:** `legal_client_overview` e `legal_expiration_list` calculam agregados sobre todos os vencimentos visíveis a cada consulta. Repetir a medição quando houver milhares de vencimentos; se "clientes: página 1" passar de ~200 ms, materializar os agregados por cliente.
+
 ## 13.1 Onde paramos (16/10/2026)
 
 - **Fases 0 a 9 implementadas.** Em produção estão login Microsoft, Dashboard (com popups por indicador), Clientes, Vencimentos (cadastro, edição, renovação, cancelamento, exclusão), Solicitações (detalhe, timeline e anexos via servidor) e Administração (Usuários, Hierarquia, Integrações, Auditoria). As migrations `legal_001` a `legal_018` foram aplicadas.
