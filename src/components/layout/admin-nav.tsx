@@ -1,6 +1,12 @@
 "use client";
 
-import { Network, ShieldCheck, UserCog, type LucideIcon } from "lucide-react";
+import {
+  Network,
+  PlugZap,
+  ShieldCheck,
+  UserCog,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,6 +18,7 @@ type AdminItem = { href: string; label: string; icon: LucideIcon };
 const ADMIN_ITEMS: AdminItem[] = [
   { href: "/admin/users", label: "Usuários", icon: UserCog },
   { href: "/admin/hierarchy", label: "Hierarquia", icon: Network },
+  { href: "/admin/integrations", label: "Integrações", icon: PlugZap },
 ];
 
 /** Grupo Administração da sidebar; renderizado só para ADMIN (decidido no servidor). */

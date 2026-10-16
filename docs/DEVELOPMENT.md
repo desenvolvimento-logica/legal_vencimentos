@@ -293,7 +293,13 @@ Estado (16/10/2026): usuários (mockup 09) implementados.
   - aviso de usuários sem gestor e busca que mantém o caminho até a pessoa;
   - painel para trocar o gestor (`changeManager` → `legal_admin_update_profile`, com auditoria).
   - Usa árvore indentada em vez do organograma horizontal do mockup, que não cabe em telas estreitas.
-- **Pendente:** integrações (mockup 06) e auditoria (11).
+- **`/admin/integrations`** (mockup 06):
+  - teste de conexão (uma chamada de leitura);
+  - cards com a última execução de cada tipo;
+  - sincronização manual **incremental** por Server Action (`maxDuration` 300 s, ADMIN exigido, paralelismo bloqueado por `legal_012`);
+  - histórico paginado com duração e erro.
+  - A carga completa continua pelo `npm run sync`.
+- **Pendente:** auditoria (mockup 11).
 
 ### Fase 9 — Dashboard
 
