@@ -70,9 +70,14 @@ export async function generateDatabaseTypes(db: PGlite): Promise<string> {
       f.args.length === 0
         ? "never"
         : `{ ${f.args.map((a) => `${a.name}: ${tsType(a.type, enums)}`).join("; ")} }`;
-    const base = tables[f.returnType]
-      ? `Database["public"]["Tables"][${JSON.stringify(f.returnType)}]["Row"]`
-      : tsType(f.returnType, enums);
+    // `returns table (...)`: o retorno é um objeto com as colunas da tabela.
+    const base = f.tableColumns
+      ? `{ ${f.tableColumns.map((c) => `${c.name}: ${tsType(c.type, enums)}`).join("; ")} }`
+      : tables[f.returnType]
+        ? `Database["public"]["Tables"][${JSON.stringify(f.returnType)}]["Row"]`
+        : f.returnType === "void"
+          ? "undefined"
+          : tsType(f.returnType, enums);
     return `${f.name}: { Args: ${args}; Returns: ${f.returnsSet ? `${base}[]` : base} }`;
   });
 
@@ -240,6 +245,7 @@ type DbFunction = {
   args: { name: string; type: string }[];
   returnType: string;
   returnsSet: boolean;
+  tableColumns?: { name: string; type: string }[];
 };
 
 async function loadFunctions(db: PGlite): Promise<DbFunction[]> {
@@ -248,12 +254,19 @@ async function loadFunctions(db: PGlite): Promise<DbFunction[]> {
     name: string;
     argNames: string[] | null;
     argTypes: string[];
+    argModes: string[] | null;
+    allArgTypes: string[] | null;
     returnType: string;
     returnsSet: boolean;
   }>(`
     select p.proname as name, p.proargnames as "argNames",
       array(select t.typname from unnest(p.proargtypes) with ordinality a(oid, i)
             join pg_type t on t.oid = a.oid order by a.i) as "argTypes",
+      p.proargmodes::text[] as "argModes",
+      case when p.proallargtypes is null then null else
+        array(select t.typname from unnest(p.proallargtypes) with ordinality a(oid, i)
+              join pg_type t on t.oid = a.oid order by a.i)
+      end as "allArgTypes",
       rt.typname as "returnType", p.proretset as "returnsSet"
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
@@ -262,13 +275,25 @@ async function loadFunctions(db: PGlite): Promise<DbFunction[]> {
       and rt.typname <> 'trigger'
       and has_function_privilege('authenticated', p.oid, 'execute')
     order by p.proname`);
-  return rows.map((row) => ({
-    name: row.name,
-    args: row.argTypes.map((type, index) => ({
-      name: row.argNames?.[index] ?? `arg${index}`,
-      type,
-    })),
-    returnType: row.returnType,
-    returnsSet: row.returnsSet,
-  }));
+  return rows.map((row) => {
+    // Com proargmodes, os nomes cobrem entradas e colunas de saída (modo 't').
+    const modes = row.argModes ?? row.argTypes.map(() => "i");
+    const names = row.argNames ?? [];
+    const allTypes = row.allArgTypes ?? row.argTypes;
+    const params = modes.map((mode, index) => ({
+      mode,
+      name: names[index] ?? `arg${index}`,
+      type: allTypes[index],
+    }));
+    const tableColumns = params.filter((p) => p.mode === "t" || p.mode === "o");
+    return {
+      name: row.name,
+      args: params
+        .filter((p) => p.mode === "i")
+        .map(({ name, type }) => ({ name, type })),
+      returnType: row.returnType,
+      returnsSet: row.returnsSet,
+      tableColumns: tableColumns.length > 0 ? tableColumns : undefined,
+    };
+  });
 }

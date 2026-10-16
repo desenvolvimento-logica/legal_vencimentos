@@ -251,6 +251,12 @@ Estado (15/10/2026): listagem `/clients` (mockup 03) implementada.
 - iniciar/concluir renovação atomicamente;
 - histórico e auditoria.
 
+Regras de ciclo de vida (decididas pelo responsável em 16/10/2026; `legal_016`, aplicadas no banco):
+- **Situações:** ACTIVE → RENEWING → RENEWED (só por `legal_complete_renewal`); RENEWING → ACTIVE (desistir); ACTIVE/RENEWING → CANCELLED, com motivo obrigatório. RENEWED e CANCELLED são finais. EXPIRED não é gravado pela aplicação.
+- **Correção de data:** permitida em registros ACTIVE, com auditoria. O cliente do vencimento é imutável.
+- **Cancelar e excluir:** permitido a qualquer usuário com acesso ao cliente. A exclusão é lógica, por `legal_delete_expiration`, e é bloqueada para registros da cadeia de renovação.
+- **Responsável:** o padrão é o da carteira do cliente e pode ser editado. O banco aceita perfil ativo do escopo de quem grava ou responsável do cliente no Acessórias. `legal_visible_profiles()` expõe só nome, e-mail e nível dos perfis relevantes.
+
 ### Fase 7 — Solicitações
 
 - sincronizar resumos;
@@ -362,12 +368,9 @@ Não criar branches ou commits automaticamente quando a tarefa atual não pedir 
 
 Estas questões não invalidam o escopo já definido, mas precisam ser resolvidas antes da parte afetada:
 
-1. Quais transições de status são permitidas (por exemplo, `RENEWING` pode voltar a `ACTIVE`? de quais estados se pode cancelar?) e qual a política de edição/cancelamento/exclusão lógica por nível, além da regra geral de escopo? Adiado pelo responsável em 15/10/2026; bloqueia a Fase 6.
-2. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados? Proposta aplicada nas migrations, sujeita a revisão: nomes e órgão emissor até 200 caracteres, número do documento até 100, observações até 2000.
-3. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
-4. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
-5. **Responsável do vencimento (RF-05):** "preencher automaticamente a partir do contexto autorizado" pode significar o usuário logado ou o perfil cujo e-mail é o responsável do cliente no Acessórias. Também falta definir quais valores de `responsible_user_id` são aceitos (AUTHORIZATION.md §9 exige rejeitar valores forjados). Bloqueia a Fase 6; hoje o banco aceita qualquer perfil existente.
-6. **Subordinados inativos no escopo:** a implementação mantém a carteira de um subordinado inativo visível ao gestor, para que não fique órfã. Confirmar se é o comportamento desejado.
-7. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
-
+1. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados? Proposta aplicada nas migrations, sujeita a revisão: nomes e órgão emissor até 200 caracteres, número do documento até 100, observações até 2000.
+2. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
+3. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
+4. **Subordinados inativos no escopo:** a implementação mantém a carteira de um subordinado inativo visível ao gestor, para que não fique órfã. Confirmar se é o comportamento desejado.
+5. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
 Ao obter uma resposta, atualizar o documento técnico correspondente e remover a questão desta lista.

@@ -390,7 +390,8 @@ describe("vencimentos: acesso cruzado (USER A x USER B)", () => {
         ),
       ),
     );
-    expect(message).toMatch(/row-level security/);
+    // Desde legal_016 o cliente é imutável (o trigger recusa antes do RLS).
+    expect(message).toMatch(/imutáveis|row-level security/);
   });
 
   it("A não altera vencimento de B (nenhuma linha afetada)", async () => {
@@ -560,6 +561,233 @@ describe("vencimentos: integridade da renovação", () => {
       );
     });
     expect(message).toMatch(/obrigatória/);
+  });
+});
+
+describe("vencimentos: ciclo de vida (legal_016)", () => {
+  const update = (tx: Transaction, sql: string) =>
+    tx.query(`update public.legal_expirations set ${sql} where id = $1`, [
+      expirationOfA,
+    ]);
+
+  it("desistir da renovação volta a ACTIVE e é auditado", async () => {
+    const actions = await asUser(db, U.userA, async (tx) => {
+      await update(tx, "status = 'RENEWING'");
+      await update(tx, "status = 'ACTIVE'");
+      await tx.exec("reset role");
+      const { rows } = await tx.query<{ action: string }>(
+        "select action from public.legal_audit_logs where entity_id = $1",
+        [expirationOfA],
+      );
+      return rows.map((row) => row.action);
+    });
+    expect(actions).toContain("EXPIRATION_RENEWAL_ABANDONED");
+  });
+
+  it("cancelar exige motivo e torna o registro final", async () => {
+    const withoutReason = await asUser(db, U.userA, (tx) =>
+      expectDbError(update(tx, "status = 'CANCELLED'")),
+    );
+    expect(withoutReason).toMatch(/cancellation_reason_check/);
+
+    const afterCancel = await asUser(db, U.userA, async (tx) => {
+      await update(
+        tx,
+        "status = 'CANCELLED', cancellation_reason = 'Cliente encerrou a atividade'",
+      );
+      return expectDbError(update(tx, "notes = 'depois de cancelar'"));
+    });
+    expect(afterCancel).toMatch(/não pode ser alterado/);
+  });
+
+  it("pode cancelar durante a renovação", async () => {
+    const status = await asUser(db, U.userA, async (tx) => {
+      await update(tx, "status = 'RENEWING'");
+      await update(
+        tx,
+        "status = 'CANCELLED', cancellation_reason = 'Desistência'",
+      );
+      const { rows } = await tx.query<{ status: string }>(
+        "select status from public.legal_expirations where id = $1",
+        [expirationOfA],
+      );
+      return rows[0].status;
+    });
+    expect(status).toBe("CANCELLED");
+  });
+
+  it("não grava EXPIRED nem RENEWED diretamente", async () => {
+    const expired = await asUser(db, U.userA, (tx) =>
+      expectDbError(update(tx, "status = 'EXPIRED'")),
+    );
+    expect(expired).toMatch(/não permitida: ACTIVE → EXPIRED/);
+    const renewed = await asUser(db, U.userA, (tx) =>
+      expectDbError(update(tx, "status = 'RENEWED', renewed_at = now()")),
+    );
+    expect(renewed).toMatch(/legal_complete_renewal/);
+  });
+
+  it("motivo só pode ser informado ao cancelar", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(update(tx, "cancellation_reason = 'sem cancelar'")),
+    );
+    expect(message).toMatch(
+      /cancellation_reason_check|só é informado ao cancelar/,
+    );
+  });
+
+  it("corrige a data em ACTIVE, mas não durante a renovação", async () => {
+    const corrected = await asUser(db, U.userA, async (tx) => {
+      await update(tx, "expiration_date = '2027-03-31'");
+      const { rows } = await tx.query<{ expiration_date: Date }>(
+        "select expiration_date from public.legal_expirations where id = $1",
+        [expirationOfA],
+      );
+      return rows[0].expiration_date.toISOString().slice(0, 10);
+    });
+    expect(corrected).toBe("2027-03-31");
+
+    const duringRenewal = await asUser(db, U.userA, async (tx) => {
+      await update(tx, "status = 'RENEWING'");
+      return expectDbError(update(tx, "expiration_date = '2027-03-31'"));
+    });
+    expect(duringRenewal).toMatch(/só pode ser corrigida em registros ativos/);
+  });
+});
+
+describe("vencimentos: responsável (legal_016)", () => {
+  const setResponsible = (
+    tx: Transaction,
+    expirationId: string,
+    profileId: string,
+  ) =>
+    tx.query(
+      "update public.legal_expirations set responsible_user_id = $2 where id = $1",
+      [expirationId, profileId],
+    );
+
+  it("aceita o próprio perfil e recusa perfil fora do escopo", async () => {
+    await asUser(db, U.userA, (tx) =>
+      setResponsible(tx, expirationOfA, P.userA),
+    );
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(setResponsible(tx, expirationOfA, P.userB)),
+    );
+    expect(message).toMatch(/fora do escopo/);
+  });
+
+  it("aceita o responsável do cliente no Acessórias, mesmo fora do escopo", async () => {
+    // B é responsável (depto 13) do cliente compartilhado; A pode atribuí-lo.
+    const responsible = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.shared, {
+        responsible_user_id: P.userB,
+      });
+      const { rows } = await tx.query<{ responsible_user_id: string }>(
+        "select responsible_user_id from public.legal_expirations where id = $1",
+        [id],
+      );
+      return rows[0].responsible_user_id;
+    });
+    expect(responsible).toBe(P.userB);
+  });
+
+  it("gestor atribui subordinado; ninguém atribui perfil inativo", async () => {
+    await asUser(db, U.leader, (tx) =>
+      setResponsible(tx, expirationOfA, P.userA),
+    );
+    const message = await asUser(db, U.leader, (tx) =>
+      expectDbError(setResponsible(tx, expirationOfA, P.inactive)),
+    );
+    expect(message).toMatch(/fora do escopo/);
+  });
+
+  it("insere com responsável forjado fora do escopo: recusado", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(
+        insertExpiration(tx, C.ofA, { responsible_user_id: P.director }),
+      ),
+    );
+    expect(message).toMatch(/fora do escopo/);
+  });
+
+  it("legal_visible_profiles expõe só perfis relevantes ao usuário", async () => {
+    const ids = await asUser(db, U.userA, async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.legal_visible_profiles() order by id",
+      );
+      return rows.map((row) => row.id);
+    });
+    // A, e B por ser responsável do cliente compartilhado; nunca diretor ou líder.
+    expect(ids).toEqual([P.userA, P.userB].sort());
+  });
+});
+
+describe("vencimentos: exclusão lógica (legal_016)", () => {
+  it("exclui logicamente, some das consultas e fica na auditoria", async () => {
+    const result = await asUser(db, U.userA, async (tx) => {
+      await tx.query("select public.legal_delete_expiration($1)", [
+        expirationOfA,
+      ]);
+      const { rows: visible } = await tx.query(
+        "select id from public.legal_expirations where id = $1",
+        [expirationOfA],
+      );
+      await tx.exec("reset role");
+      const { rows: stored } = await tx.query<{ deleted_at: Date | null }>(
+        "select deleted_at from public.legal_expirations where id = $1",
+        [expirationOfA],
+      );
+      const { rows: audit } = await tx.query(
+        "select 1 from public.legal_audit_logs where entity_id = $1 and action = 'EXPIRATION_DELETED'",
+        [expirationOfA],
+      );
+      return {
+        visible: visible.length,
+        deletedAt: stored[0].deleted_at,
+        audit: audit.length,
+      };
+    });
+    expect(result.visible).toBe(0);
+    expect(result.deletedAt).not.toBeNull();
+    expect(result.audit).toBe(1);
+  });
+
+  it("não exclui vencimento de outro usuário", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(
+        tx.query("select public.legal_delete_expiration($1)", [expirationOfB]),
+      ),
+    );
+    expect(message).toMatch(/não encontrado/);
+  });
+
+  it("não exclui por UPDATE direto de deleted_at", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(
+        tx.query(
+          "update public.legal_expirations set deleted_at = now() where id = $1",
+          [expirationOfA],
+        ),
+      ),
+    );
+    expect(message).toMatch(/legal_delete_expiration|row-level security/);
+  });
+
+  it("não exclui vencimento que faz parte de cadeia de renovação", async () => {
+    const message = await asUser(db, U.userA, async (tx) => {
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [expirationOfA],
+      );
+      await tx.query("select public.legal_complete_renewal($1, $2::jsonb)", [
+        expirationOfA,
+        JSON.stringify({ expiration_date: "2027-12-31" }),
+      ]);
+      return expectDbError(
+        tx.query("select public.legal_delete_expiration($1)", [expirationOfA]),
+      );
+    });
+    expect(message).toMatch(/cadeia de renovação/);
   });
 });
 

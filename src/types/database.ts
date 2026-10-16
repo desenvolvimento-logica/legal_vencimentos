@@ -258,6 +258,7 @@ export type Database = {
       };
       legal_expirations: {
         Row: {
+          cancellation_reason: string | null;
           client_id: string;
           created_at: string;
           created_by: string;
@@ -278,6 +279,7 @@ export type Database = {
           updated_by: string;
         };
         Insert: {
+          cancellation_reason?: string | null;
           client_id: string;
           created_at?: string;
           created_by: string;
@@ -298,6 +300,7 @@ export type Database = {
           updated_by: string;
         };
         Update: {
+          cancellation_reason?: string | null;
           client_id?: string;
           created_at?: string;
           created_by?: string;
@@ -501,6 +504,10 @@ export type Database = {
         Args: { client_uuid: string };
         Returns: boolean;
       };
+      legal_can_assign_responsible: {
+        Args: { client_uuid: string; profile_uuid: string };
+        Returns: boolean;
+      };
       legal_complete_renewal: {
         Args: { old_id: string; payload: Json };
         Returns: Database["public"]["Tables"]["legal_expirations"]["Row"];
@@ -510,12 +517,26 @@ export type Database = {
         Returns: Database["public"]["Tables"]["legal_profiles"]["Row"][];
       };
       legal_current_profile_id: { Args: never; Returns: string };
+      legal_delete_expiration: {
+        Args: { expiration_id: string };
+        Returns: undefined;
+      };
       legal_get_user_scope: { Args: never; Returns: string[] };
       legal_has_global_scope: { Args: never; Returns: boolean };
       legal_is_admin: { Args: never; Returns: boolean };
       legal_scope_emails: { Args: never; Returns: string[] };
       legal_session_is_microsoft: { Args: never; Returns: boolean };
       legal_visible_client_ids: { Args: never; Returns: string[] };
+      legal_visible_profiles: {
+        Args: never;
+        Returns: {
+          id: string;
+          name: string;
+          email: string;
+          hierarchy_level: Database["public"]["Enums"]["legal_hierarchy_level"];
+          active: boolean;
+        }[];
+      };
     };
     Enums: {
       legal_expiration_status:
