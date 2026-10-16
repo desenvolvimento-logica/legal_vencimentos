@@ -19,4 +19,5 @@ export const SEGMENT_LABELS: Record<string, string> = {
   hierarchy: "Hierarquia",
   integrations: "Integrações",
   audit: "Auditoria",
+  renew: "Renovar",
 };

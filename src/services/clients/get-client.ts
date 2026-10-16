@@ -28,6 +28,10 @@ export type ClientExpiration = {
   documentNumber: string | null;
   issuer: string | null;
   expirationDate: string;
+  issueDate: string | null;
+  responsibleUserId: string | null;
+  notes: string | null;
+  cancellationReason: string | null;
   status: ExpirationStatus;
 };
 
@@ -105,7 +109,7 @@ export async function listClientExpirations(
   const { data, error } = await supabase
     .from("legal_expirations")
     .select(
-      "id, expiration_type, document_name, document_number, issuer, expiration_date, status",
+      "id, expiration_type, document_name, document_number, issuer, expiration_date, issue_date, responsible_user_id, notes, cancellation_reason, status",
     )
     .eq("client_id", clientId)
     .in("status", scope === "current" ? CURRENT_STATUSES : HISTORY_STATUSES)
@@ -120,6 +124,10 @@ export async function listClientExpirations(
     documentNumber: row.document_number,
     issuer: row.issuer,
     expirationDate: row.expiration_date,
+    issueDate: row.issue_date,
+    responsibleUserId: row.responsible_user_id,
+    notes: row.notes,
+    cancellationReason: row.cancellation_reason,
     status: row.status,
   }));
 }

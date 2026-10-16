@@ -5,6 +5,7 @@ import {
   History,
   Inbox,
   Lock,
+  Plus,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -13,7 +14,10 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { Pagination } from "@/components/data/pagination";
+import { ExpirationFormSheet } from "@/components/expirations/expiration-form-sheet";
+import { ExpirationRowActions } from "@/components/expirations/expiration-row-actions";
 import { ExpirationStatusBadge } from "@/components/expirations/expiration-status-badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCivilDate, toBusinessCivilDate } from "@/lib/dates";
 import { displayStatus } from "@/lib/expirations/display-status";
@@ -28,6 +32,10 @@ import {
   type ClientDetail,
   type ClientExpiration,
 } from "@/services/clients/get-client";
+import {
+  getResponsibleChoices,
+  type ResponsibleOption,
+} from "@/services/expirations/responsibles";
 
 export const metadata: Metadata = {
   title: "Cliente — Controle de Vencimentos",
@@ -65,10 +73,27 @@ async function ClientContent({
     ? (query.aba as TabKey)
     : "visao-geral";
   const page = Math.max(1, Number(query.pagina) || 1);
+  const responsibles = await getResponsibleChoices(client);
+  const clientRef = { id: client.id, name: client.corporateName };
 
   return (
     <div className="flex flex-col gap-6">
-      <ClientHeader client={client} />
+      <ClientHeader
+        client={client}
+        action={
+          <ExpirationFormSheet
+            client={clientRef}
+            responsibles={responsibles.options}
+            defaultResponsibleId={responsibles.defaultId}
+            trigger={
+              <Button>
+                <Plus aria-hidden />
+                Novo vencimento
+              </Button>
+            }
+          />
+        }
+      />
       <nav
         aria-label="Seções do cliente"
         className="flex gap-1 overflow-x-auto border-b"
@@ -92,18 +117,32 @@ async function ClientContent({
       <Suspense key={`${tab}-${page}`} fallback={<TabSkeleton />}>
         {tab === "visao-geral" && <OverviewTab client={client} />}
         {tab === "vencimentos" && (
-          <ExpirationsTab clientId={client.id} scope="current" />
+          <ExpirationsTab
+            client={clientRef}
+            responsibles={responsibles.options}
+            scope="current"
+          />
         )}
         {tab === "solicitacoes" && <RequestsTab client={client} page={page} />}
         {tab === "historico" && (
-          <ExpirationsTab clientId={client.id} scope="history" />
+          <ExpirationsTab
+            client={clientRef}
+            responsibles={responsibles.options}
+            scope="history"
+          />
         )}
       </Suspense>
     </div>
   );
 }
 
-function ClientHeader({ client }: { client: ClientDetail }) {
+function ClientHeader({
+  client,
+  action,
+}: {
+  client: ClientDetail;
+  action: React.ReactNode;
+}) {
   const active = client.status?.toLowerCase().startsWith("ativ");
   const primary = client.responsibles.find((r) => r.departmentId === "5");
   const certificate = client.responsibles.find((r) => r.departmentId !== "5");
@@ -151,6 +190,7 @@ function ClientHeader({ client }: { client: ClientDetail }) {
             {client.status}
           </span>
         )}
+        <div className="ml-auto">{action}</div>
       </div>
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {fields.map((field) => (
@@ -296,15 +336,28 @@ function SummaryCard({
 }
 
 async function ExpirationsTab({
-  clientId,
+  client,
+  responsibles,
   scope,
 }: {
-  clientId: string;
+  client: { id: string; name: string };
+  responsibles: ResponsibleOption[];
   scope: "current" | "history";
 }) {
-  const expirations = await listClientExpirations(clientId, scope);
+  const expirations = await listClientExpirations(client.id, scope);
   await connection();
   const today = toBusinessCivilDate(new Date());
+  const names = new Map(responsibles.map((option) => [option.id, option.name]));
+  const headers = [
+    "Tipo",
+    "Documento",
+    "Número",
+    "Órgão emissor",
+    "Vencimento",
+    "Responsável",
+    "Situação",
+    scope === "current" ? "Ações" : "Motivo",
+  ];
 
   return (
     <Card className="gap-4 px-5 py-5">
@@ -324,23 +377,16 @@ async function ExpirationsTab({
           }
           description={
             scope === "current"
-              ? "O cadastro de vencimentos será liberado na próxima etapa do sistema."
+              ? "Use “Novo vencimento” para cadastrar certidões, licenças e certificados deste cliente."
               : "Renovações e cancelamentos aparecerão aqui, preservando a cadeia histórica."
           }
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[960px] text-sm">
             <thead className="bg-muted/60 text-left">
               <tr>
-                {[
-                  "Tipo",
-                  "Documento",
-                  "Número",
-                  "Órgão emissor",
-                  "Vencimento",
-                  "Situação",
-                ].map((header) => (
+                {headers.map((header) => (
                   <th
                     key={header}
                     scope="col"
@@ -366,6 +412,11 @@ async function ExpirationsTab({
                     {formatCivilDate(item.expirationDate)}
                   </td>
                   <td className="px-4 py-3">
+                    {(item.responsibleUserId &&
+                      names.get(item.responsibleUserId)) ??
+                      "—"}
+                  </td>
+                  <td className="px-4 py-3">
                     <ExpirationStatusBadge
                       status={displayStatus(
                         item.status,
@@ -373,6 +424,33 @@ async function ExpirationsTab({
                         today,
                       )}
                     />
+                  </td>
+                  <td className="px-4 py-3">
+                    {scope === "current" ? (
+                      <ExpirationRowActions
+                        client={client}
+                        responsibles={responsibles}
+                        expiration={{
+                          id: item.id,
+                          documentName: item.documentName,
+                          status: item.status,
+                          values: {
+                            expirationType: item.type,
+                            documentName: item.documentName,
+                            documentNumber: item.documentNumber ?? "",
+                            issuer: item.issuer ?? "",
+                            issueDate: item.issueDate ?? "",
+                            expirationDate: item.expirationDate,
+                            responsibleUserId: item.responsibleUserId ?? "",
+                            notes: item.notes ?? "",
+                          },
+                        }}
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {item.cancellationReason ?? "—"}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
