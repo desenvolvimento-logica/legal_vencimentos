@@ -432,6 +432,7 @@ Medido em produção com `supabase/inspect/legal_inspect_performance.sql` (`EXPL
 - **Melhorias de 16/10/2026 (legal_020, aplicar):** tema claro/escuro; periodicidade e lembrete no cadastro; vencimento calculado pela periodicidade; “Concluir renovação” direto para vencimentos com periodicidade; popup de detalhes ao clicar na linha em Vencimentos; popup de lembretes ao abrir o app (USER vê os dele; gestão e ADMIN veem os do escopo; fechado até o fim da sessão).
 - **Orçamento enviado (legal_021 + legal_022, aplicar em duas execuções):** nova situação entre Vigente e Em renovação, com data de envio automática, card no Dashboard e filtro em Vencimentos. Vencido continua contando só registros `ACTIVE` (como em renovação, o orçamento enviado aparece pela própria situação).
 - **Solicitações (legal_023, aplicar):** tela `/requests` centraliza as solicitações de todos os clientes do escopo, com filtros, atalhos de em aberto/atrasadas e o mesmo painel de detalhe da aba do cliente.
+- **Limpeza de testes:** `supabase/maintenance/legal_soft_delete_test_chain.sql` faz a exclusão lógica (com auditoria do ADMIN) de uma cadeia de renovação de teste cujo registro vigente já foi excluído pelo app. Só para dados de teste.
 - **Decisões:** a view `legal_expiration_list` (legal_017) não ganhou colunas — reaplicar legal_017 depois falharia (“cannot drop columns from view”); a tela busca `renewal_period`/`reminder_days` na tabela pelos ids da página.
 - **Validação manual pendente:**
   - download de anexos de solicitações;

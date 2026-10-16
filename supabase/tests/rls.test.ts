@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import type { PGlite, Transaction } from "@electric-sql/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -1138,6 +1140,90 @@ describe("vencimentos: exclusão lógica (legal_016)", () => {
       );
     });
     expect(message).toMatch(/cadeia de renovação/);
+  });
+});
+
+describe("manutenção: exclusão lógica de cadeia de teste", () => {
+  const script = readFileSync(
+    new URL("../maintenance/legal_soft_delete_test_chain.sql", import.meta.url),
+    "utf8",
+  );
+
+  it("exclui o RENEWED órfão e os anteriores, com auditoria do ADMIN", async () => {
+    await db.transaction(async (tx) => {
+      // Cadeia de teste: original → renovado → sucessor excluído pelo app.
+      await setSession(tx, "authenticated", microsoftClaims(U.userA));
+      const first = await insertExpiration(tx, C.ofA);
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [first],
+      );
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.legal_complete_renewal($1, $2::jsonb)",
+        [first, JSON.stringify({ expiration_date: "2027-12-31" })],
+      );
+      const second = rows[0].id;
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [second],
+      );
+      const { rows: third } = await tx.query<{ id: string }>(
+        "select id from public.legal_complete_renewal($1, $2::jsonb)",
+        [second, JSON.stringify({ expiration_date: "2028-12-31" })],
+      );
+      await tx.query("select public.legal_delete_expiration($1)", [
+        third[0].id,
+      ]);
+      await tx.exec("reset role");
+      await tx.query("select set_config('request.jwt.claims', '', true)");
+
+      await tx.exec(
+        script.replace("dfb526a6-3fb9-46d4-b16d-ef740964e54f", second),
+      );
+      const { rows: result } = await tx.query<{
+        id: string;
+        deleted_at: Date | null;
+      }>(
+        "select id, deleted_at from public.legal_expirations where id = any($1::uuid[]) order by created_at",
+        [[first, second]],
+      );
+      const { rows: audit } = await tx.query<{ user_id: string }>(
+        "select user_id from public.legal_audit_logs where action = 'EXPIRATION_DELETED' and entity_id = any($1::uuid[])",
+        [[first, second]],
+      );
+      const { rows: admin } = await tx.query<{ id: string }>(
+        "select id from public.legal_profiles where hierarchy_level = 'ADMIN'",
+      );
+
+      expect(result.every((row) => row.deleted_at !== null)).toBe(true);
+      expect(audit).toHaveLength(2);
+      expect(new Set(audit.map((row) => row.user_id))).toEqual(
+        new Set([admin[0].id]),
+      );
+      await tx.rollback();
+    });
+  });
+
+  it("recusa cadeia com sucessor vigente", async () => {
+    await db.transaction(async (tx) => {
+      await setSession(tx, "authenticated", microsoftClaims(U.userA));
+      const first = await insertExpiration(tx, C.ofA);
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [first],
+      );
+      await tx.query("select public.legal_complete_renewal($1, $2::jsonb)", [
+        first,
+        JSON.stringify({ expiration_date: "2027-12-31" }),
+      ]);
+      await tx.exec("reset role");
+      await tx.query("select set_config('request.jwt.claims', '', true)");
+      const message = await expectDbError(
+        tx.exec(script.replace("dfb526a6-3fb9-46d4-b16d-ef740964e54f", first)),
+      );
+      expect(message).toMatch(/sucessor vigente/);
+      await tx.rollback();
+    });
   });
 });
 
