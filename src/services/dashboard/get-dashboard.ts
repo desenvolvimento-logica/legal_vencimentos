@@ -1,10 +1,11 @@
 import "server-only";
 
-import { parseAcessoriasDateTime } from "@/lib/acessorias/dates";
 import { addCivilDays } from "@/lib/dates";
 import type { ExpirationStatus } from "@/lib/expirations/display-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
+
+import { applyMetricFilter, type ExpirationMetric } from "./metrics";
 
 export const UPCOMING_WINDOWS = [7, 15, 30] as const;
 export type UpcomingWindow = (typeof UPCOMING_WINDOWS)[number];
@@ -49,25 +50,24 @@ export async function getDashboard(today: string, window: UpcomingWindow) {
       .from("legal_expiration_list")
       .select("id", { count: "exact", head: true });
 
-  // Início do mês corrente em Brasília, como instante UTC.
-  const [year, month] = today.split("-");
-  const monthStart = parseAcessoriasDateTime(`01/${month}/${year} 00:00:00`)!;
+  // Mesma regra do popup de cada card (metrics.ts).
+  const metric = (key: Exclude<ExpirationMetric, "renewedThisMonth">) =>
+    applyMetricFilter(list(), key, today);
 
   const counts = await Promise.all([
     supabase.from("legal_clients").select("id", { count: "exact", head: true }),
-    list().eq("status", "ACTIVE").lt("expiration_date", today),
-    ...UPCOMING_WINDOWS.map((days) =>
-      list()
-        .in("status", CURRENT)
-        .gte("expiration_date", today)
-        .lte("expiration_date", addCivilDays(today, days)),
+    metric("overdue"),
+    metric("next7"),
+    metric("next15"),
+    metric("next30"),
+    metric("renewing"),
+    applyMetricFilter(
+      supabase
+        .from("legal_expirations")
+        .select("id", { count: "exact", head: true }),
+      "renewedThisMonth",
+      today,
     ),
-    list().eq("status", "RENEWING"),
-    supabase
-      .from("legal_expirations")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "RENEWED")
-      .gte("renewed_at", monthStart),
     ...(["CERTIDAO", "LICENCA", "CERTIFICADO"] as const).map((type) =>
       list().in("status", CURRENT).eq("expiration_type", type),
     ),

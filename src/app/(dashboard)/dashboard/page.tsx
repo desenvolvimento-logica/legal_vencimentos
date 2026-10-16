@@ -1,20 +1,11 @@
-import {
-  CalendarClock,
-  CalendarDays,
-  ChevronRight,
-  CircleAlert,
-  CircleCheck,
-  Clock,
-  PieChart,
-  RefreshCw,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarDays, ChevronRight, PieChart, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
+import { MetricCardBody } from "@/components/dashboard/metric-card";
+import { MetricDialogCard } from "@/components/dashboard/metric-dialog-card";
 import { TypeDistribution } from "@/components/dashboard/type-distribution";
 import { ExpirationStatusBadge } from "@/components/expirations/expiration-status-badge";
 import { PageHeader } from "@/components/layout/page-header";
@@ -30,7 +21,6 @@ import { cn } from "@/lib/utils";
 import {
   getDashboard,
   UPCOMING_WINDOWS,
-  type DashboardMetrics,
   type UpcomingWindow,
 } from "@/services/dashboard/get-dashboard";
 import { listVisibleProfileNames } from "@/services/expirations/responsibles";
@@ -75,80 +65,6 @@ async function OperationalDate() {
   );
 }
 
-type Tone = "neutral" | "danger" | "orange" | "warning" | "info" | "success";
-
-const TONES: Record<Tone, { chip: string; value: string }> = {
-  neutral: { chip: "bg-muted text-foreground", value: "text-foreground" },
-  danger: { chip: "bg-danger/10 text-danger", value: "text-danger" },
-  orange: {
-    chip: "bg-orange-600/10 text-orange-700",
-    value: "text-orange-700",
-  },
-  warning: { chip: "bg-warning/10 text-warning", value: "text-warning" },
-  info: { chip: "bg-info/10 text-info", value: "text-info" },
-  success: { chip: "bg-success/10 text-success", value: "text-success" },
-};
-
-function metricCards(metrics: DashboardMetrics): {
-  label: string;
-  value: number;
-  icon: LucideIcon;
-  tone: Tone;
-  href: string;
-}[] {
-  return [
-    {
-      label: "Total de clientes",
-      value: metrics.clients,
-      icon: Users,
-      tone: "neutral",
-      href: "/clients",
-    },
-    {
-      label: "Vencidos",
-      value: metrics.overdue,
-      icon: CircleAlert,
-      tone: "danger",
-      href: "/expirations?situacao=vencidos",
-    },
-    {
-      label: "Próximos 7 dias",
-      value: metrics.next7,
-      icon: Clock,
-      tone: "orange",
-      href: "/expirations?periodo=7",
-    },
-    {
-      label: "Próximos 15 dias",
-      value: metrics.next15,
-      icon: CalendarClock,
-      tone: "warning",
-      href: "/expirations?periodo=15",
-    },
-    {
-      label: "Próximos 30 dias",
-      value: metrics.next30,
-      icon: CalendarDays,
-      tone: "info",
-      href: "/expirations?periodo=30",
-    },
-    {
-      label: "Em renovação",
-      value: metrics.renewing,
-      icon: RefreshCw,
-      tone: "info",
-      href: "/expirations?situacao=em-renovacao",
-    },
-    {
-      label: "Renovados no mês",
-      value: metrics.renewedThisMonth,
-      icon: CircleCheck,
-      tone: "success",
-      href: "/expirations?situacao=renovados",
-    },
-  ];
-}
-
 async function DashboardContent({
   searchParams,
 }: Pick<PageProps<"/dashboard">, "searchParams">) {
@@ -170,32 +86,28 @@ async function DashboardContent({
         aria-label="Indicadores"
         className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-7"
       >
-        {metricCards(metrics).map((card) => (
-          <Link
-            key={card.label}
-            href={card.href}
-            className="group rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            <Card className="h-full gap-3 px-5 py-5 transition-shadow group-hover:shadow-md">
-              <span
-                className={cn(
-                  "flex size-10 items-center justify-center rounded-lg",
-                  TONES[card.tone].chip,
-                )}
-              >
-                <card.icon className="size-5" aria-hidden />
-              </span>
-              <p className="text-sm text-muted-foreground">{card.label}</p>
-              <p
-                className={cn(
-                  "text-[2.25rem] leading-none font-bold tabular-nums",
-                  TONES[card.tone].value,
-                )}
-              >
-                {card.value}
-              </p>
-            </Card>
-          </Link>
+        <Link
+          href="/clients"
+          className="group rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <MetricCardBody
+            label="Total de clientes"
+            value={metrics.clients}
+            icon={Users}
+            tone="neutral"
+          />
+        </Link>
+        {(
+          [
+            ["overdue", metrics.overdue],
+            ["next7", metrics.next7],
+            ["next15", metrics.next15],
+            ["next30", metrics.next30],
+            ["renewing", metrics.renewing],
+            ["renewedThisMonth", metrics.renewedThisMonth],
+          ] as const
+        ).map(([metric, value]) => (
+          <MetricDialogCard key={metric} metric={metric} value={value} />
         ))}
       </section>
 

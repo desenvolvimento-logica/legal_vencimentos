@@ -281,7 +281,7 @@ Regras de ciclo de vida (decididas pelo responsável em 16/10/2026; `legal_016`,
 - métricas e tabela de próximos vencimentos, com escopo e queries otimizadas.
 
 Estado (16/10/2026): implementada (mockup 02).
-- **Indicadores** (via RLS): total de clientes, vencidos, próximos 7/15/30 dias (janelas acumuladas a partir de hoje), em renovação e renovados no mês corrente, no horário de Brasília. Cada card leva à lista filtrada.
+- **Indicadores** (via RLS): total de clientes, vencidos, próximos 7/15/30 dias (janelas acumuladas a partir de hoje), em renovação e renovados no mês corrente, no horário de Brasília. Ao clicar, cada card de vencimentos abre um popup com os itens que compõem o número (até 50, com link para a tela Vencimentos); a regra de cada indicador fica em `src/services/dashboard/metrics.ts` e é usada tanto na contagem quanto no popup. "Total de clientes" leva à tela Clientes (pedido do responsável em 16/10/2026).
 - **Tabela de próximos vencimentos:** janelas de 7/15/30 dias, incluindo os já vencidos.
 - **Distribuição por tipo:** usa barra empilhada em vez do donut do mockup, porque parte do todo é mais legível em barra (diretriz de visualização). A paleta categórica foi validada contra a superfície branca, e a legenda mostra quantidade e percentual.
 
