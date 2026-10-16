@@ -521,6 +521,36 @@ export type Database = {
       };
     };
     Functions: {
+      legal_admin_create_profile: {
+        Args: {
+          target_user_id: string;
+          profile_name: string;
+          profile_job_title: string;
+          profile_level: Database["public"]["Enums"]["legal_hierarchy_level"];
+          profile_manager_id: string;
+        };
+        Returns: Database["public"]["Tables"]["legal_profiles"]["Row"];
+      };
+      legal_admin_list_profile_candidates: {
+        Args: { search: string };
+        Returns: {
+          user_id: string;
+          email: string;
+          name: string;
+          last_sign_in_at: string;
+        }[];
+      };
+      legal_admin_update_profile: {
+        Args: {
+          target_profile_id: string;
+          profile_name: string;
+          profile_job_title: string;
+          profile_level: Database["public"]["Enums"]["legal_hierarchy_level"];
+          profile_manager_id: string;
+          profile_active: boolean;
+        };
+        Returns: Database["public"]["Tables"]["legal_profiles"]["Row"];
+      };
       legal_auth_uid: { Args: never; Returns: string };
       legal_can_access_client: {
         Args: { client_uuid: string };

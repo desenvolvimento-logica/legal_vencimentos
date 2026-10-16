@@ -53,3 +53,11 @@ as $$
 $$;
 
 grant execute on function auth.jwt() to anon, authenticated, service_role;
+
+-- Identidades por provedor (o login do sistema exige a identidade azure).
+create table auth.identities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id),
+  provider text not null,
+  last_sign_in_at timestamptz
+);

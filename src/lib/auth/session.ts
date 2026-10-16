@@ -1,6 +1,6 @@
 import "server-only";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 
 import { LOGIN_PATH } from "@/lib/auth/paths";
@@ -68,4 +68,15 @@ export async function requireProfile(): Promise<CurrentProfile> {
     redirect("/auth/signout?erro=sem-acesso");
   }
   return state.profile;
+}
+
+/**
+ * Exige perfil ADMIN. Para os demais a rota "não existe" (404), sem revelar
+ * a área administrativa. A autorização real das operações está no banco
+ * (funções legal_admin_*).
+ */
+export async function requireAdmin(): Promise<CurrentProfile> {
+  const profile = await requireProfile();
+  if (!profile.isAdmin) notFound();
+  return profile;
 }

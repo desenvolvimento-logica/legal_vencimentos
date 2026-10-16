@@ -283,6 +283,13 @@ Estado (16/10/2026): implementada (mockup 08), na aba Solicitações do cliente.
 - usuários, árvore, integrações e auditoria;
 - validações de ciclo/nível e transações.
 
+Estado (16/10/2026): usuários (mockup 09) implementados.
+- **`/admin/*`:** exige ADMIN no servidor (`requireAdmin`, 404 para os demais). O menu Administração só aparece para ADMIN.
+- **Adicionar usuário:** escolhe uma conta Microsoft já existente em `auth.users` que ainda não tem perfil (`legal_admin_list_profile_candidates`) e define nome, cargo, nível e gestor.
+- **Editar usuário:** nome, cargo, nível, gestor e ativo. O e-mail vem da conta Microsoft. Os gestores possíveis são os perfis ativos de nível acima, e o banco revalida a hierarquia.
+- **Funções `legal_admin_*`** (`legal_018`): SECURITY DEFINER, exigem ADMIN e gravam auditoria (`PROFILE_CREATED`, `PROFILE_UPDATED`, `PROFILE_LEVEL_CHANGED`, `PROFILE_MANAGER_CHANGED`, `PROFILE_ACTIVATED`, `PROFILE_DEACTIVATED`). O ADMIN não consegue se desativar nem se rebaixar.
+- **Pendente:** hierarquia (mockup 10), integrações (06) e auditoria (11).
+
 ### Fase 9 — Dashboard
 
 - métricas e tabela de próximos vencimentos, com escopo e queries otimizadas.

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { HIERARCHY_LABELS } from "@/lib/auth/labels";
 import { requireProfile } from "@/lib/auth/session";
 
+import { AdminNavSlot } from "./admin-nav-slot";
 import { Breadcrumb, BreadcrumbFallback } from "./breadcrumb";
 import { MobileNav } from "./mobile-nav";
 import { UserMenu } from "./user-menu";
@@ -11,7 +12,7 @@ import { UserMenu } from "./user-menu";
 export function AppHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-card px-4 sm:px-8">
-      <MobileNav />
+      <MobileNav adminSlot={<AdminNavSlot mobile />} />
       <div className="min-w-0 flex-1">
         <Suspense fallback={<BreadcrumbFallback />}>
           <Breadcrumb />

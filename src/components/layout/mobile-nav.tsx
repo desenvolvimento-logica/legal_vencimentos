@@ -14,7 +14,7 @@ import {
 import { SidebarContent } from "./sidebar-content";
 
 /** Navegação em painel lateral para telas abaixo de md (docs/UI-MOCKUPS.md §10). */
-export function MobileNav() {
+export function MobileNav({ adminSlot }: { adminSlot?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -37,7 +37,11 @@ export function MobileNav() {
         showCloseButton={false}
       >
         <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-        <SidebarContent onNavigate={() => setOpen(false)} />
+        <SidebarContent
+          onNavigate={() => setOpen(false)}
+          // Os links do grupo vêm do servidor; o clique fecha o menu aqui.
+          adminSlot={<div onClick={() => setOpen(false)}>{adminSlot}</div>}
+        />
       </SheetContent>
     </Sheet>
   );

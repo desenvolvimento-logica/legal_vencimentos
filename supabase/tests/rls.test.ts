@@ -1020,6 +1020,160 @@ describe("sincronização", () => {
   });
 });
 
+describe("administração de perfis (legal_018)", () => {
+  const CANDIDATE = "00000000-0000-4000-8000-0000000000c1";
+  const NO_MICROSOFT = "00000000-0000-4000-8000-0000000000c2";
+
+  /** Contas no Auth: uma com identidade Microsoft, outra só com senha. */
+  async function seedAccounts(tx: Transaction) {
+    await tx.exec("reset role");
+    await tx.query(
+      `insert into auth.users (id, email, raw_user_meta_data) values
+         ($1, 'Nova.Pessoa@Teste.Local', '{"full_name": "Nova Pessoa"}'),
+         ($2, 'so.senha@teste.local', '{}')`,
+      [CANDIDATE, NO_MICROSOFT],
+    );
+    await tx.query(
+      `insert into auth.identities (user_id, provider) values
+         ($1, 'azure'), ($3, 'azure'), ($2, 'email')`,
+      [CANDIDATE, NO_MICROSOFT, U.userA],
+    );
+    await setSession(tx, "authenticated", microsoftClaims(U.admin));
+  }
+
+  it("USER não acessa nenhuma função administrativa", async () => {
+    for (const sql of [
+      "select * from public.legal_admin_list_profile_candidates('')",
+      `select * from public.legal_admin_create_profile('${CANDIDATE}', 'X', null, 'USER', null)`,
+      `select * from public.legal_admin_update_profile('${P.userA}', 'X', null, 'ADMIN', null, true)`,
+    ]) {
+      const message = await asUser(db, U.userA, (tx) =>
+        expectDbError(tx.query(sql)),
+      );
+      expect(message).toMatch(/ACCESS DENIED/);
+    }
+  });
+
+  it("lista só contas Microsoft que ainda não têm perfil", async () => {
+    const emails = await asUser(db, U.admin, async (tx) => {
+      await seedAccounts(tx);
+      const { rows } = await tx.query<{ email: string; name: string }>(
+        "select email, name from public.legal_admin_list_profile_candidates('')",
+      );
+      return rows;
+    });
+    // A tem identidade azure, mas já tem perfil; a conta só com senha não aparece.
+    expect(emails).toEqual([
+      { email: "nova.pessoa@teste.local", name: "Nova Pessoa" },
+    ]);
+  });
+
+  it("cria perfil a partir da conta Microsoft, com auditoria", async () => {
+    const result = await asUser(db, U.admin, async (tx) => {
+      await seedAccounts(tx);
+      const { rows } = await tx.query<{
+        id: string;
+        email: string;
+        manager_id: string;
+      }>(
+        `select * from public.legal_admin_create_profile($1, ' Nova Pessoa ', 'Analista', 'USER', $2)`,
+        [CANDIDATE, P.leader],
+      );
+      const duplicate = await expectDbError(
+        tx.query(
+          `select * from public.legal_admin_create_profile($1, 'De novo', null, 'USER', null)`,
+          [CANDIDATE],
+        ),
+      );
+      return { profile: rows[0], duplicate };
+    });
+    expect(result.profile).toMatchObject({
+      email: "nova.pessoa@teste.local",
+      manager_id: P.leader,
+    });
+    expect(result.duplicate).toMatch(/já possui perfil/);
+  });
+
+  it("não cria perfil para conta sem identidade Microsoft", async () => {
+    const message = await asUser(db, U.admin, async (tx) => {
+      await seedAccounts(tx);
+      return expectDbError(
+        tx.query(
+          `select * from public.legal_admin_create_profile($1, 'Sem MS', null, 'USER', null)`,
+          [NO_MICROSOFT],
+        ),
+      );
+    });
+    expect(message).toMatch(/Conta Microsoft não encontrada/);
+  });
+
+  it("altera nível e gestor validando a hierarquia, e audita", async () => {
+    const result = await asUser(db, U.admin, async (tx) => {
+      const { rows } = await tx.query<{ hierarchy_level: string }>(
+        `select * from public.legal_admin_update_profile($1, 'Usuário B', 'Líder', 'LEADER', $2, true)`,
+        [P.userB, P.coordinator],
+      );
+      await tx.exec("reset role");
+      const { rows: audit } = await tx.query<{ action: string }>(
+        "select action from public.legal_audit_logs where entity_id = $1",
+        [P.userB],
+      );
+      await setSession(tx, "authenticated", microsoftClaims(U.admin));
+      // Por último: o erro esperado aborta a transação.
+      const invalid = await expectDbError(
+        tx.query(
+          `select * from public.legal_admin_update_profile($1, 'Usuário A', null, 'USER', $2, true)`,
+          // Gestor de si mesmo: recusado pela validação da hierarquia.
+          [P.userA, P.userA],
+        ),
+      );
+      return {
+        level: rows[0].hierarchy_level,
+        invalid,
+        audit: audit.map((r) => r.action),
+      };
+    });
+    expect(result.level).toBe("LEADER");
+    expect(result.invalid).toMatch(/acima do subordinado|manager_not_self/);
+    expect(result.audit).toContain("PROFILE_LEVEL_CHANGED");
+  });
+
+  it("desativar perfil corta o acesso na hora", async () => {
+    const visible = await asUser(db, U.admin, async (tx) => {
+      await tx.query(
+        `select * from public.legal_admin_update_profile($1, 'Usuário B', null, 'USER', null, false)`,
+        [P.userB],
+      );
+      await setSession(tx, "authenticated", microsoftClaims(U.userB));
+      return visibleClients(tx);
+    });
+    expect(visible).toEqual([]);
+  });
+
+  it("admin não desativa nem rebaixa o próprio perfil", async () => {
+    const adminProfileId = await db
+      .query<{ id: string }>(
+        "select id from public.legal_profiles where user_id = $1",
+        [U.admin],
+      )
+      .then((r) => r.rows[0].id);
+    for (const [level, active] of [
+      ["ADMIN", false],
+      ["DIRECTOR", true],
+    ] as const) {
+      const message = await asUser(db, U.admin, (tx) =>
+        expectDbError(
+          tx.query(
+            `select * from public.legal_admin_update_profile($1, 'Desenvolvimento', null, $2, null, $3)`,
+            [adminProfileId, level, active],
+          ),
+        ),
+      );
+      expect(message).toMatch(/próprio perfil/);
+    }
+  });
+});
+
 describe("validação da hierarquia", () => {
   const rejects = async (sql: string) =>
     expectDbError(

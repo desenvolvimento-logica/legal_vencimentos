@@ -12,10 +12,12 @@ import { NAV_ITEMS } from "./nav-items";
 type SidebarContentProps = {
   /** Chamado ao navegar; usado para fechar o menu no mobile. */
   onNavigate?: () => void;
+  /** Grupo Administração, já filtrado no servidor (só ADMIN recebe). */
+  adminSlot?: React.ReactNode;
 };
 
 // Referência visual: docs/mockups/02-dashboard.png (sidebar navy).
-export function SidebarContent({ onNavigate }: SidebarContentProps) {
+export function SidebarContent({ onNavigate, adminSlot }: SidebarContentProps) {
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex flex-col gap-4 px-6 pt-7 pb-8">
@@ -43,6 +45,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
       <Suspense fallback={<NavList pathname={null} onNavigate={onNavigate} />}>
         <ActiveNavList onNavigate={onNavigate} />
       </Suspense>
+      {adminSlot}
     </div>
   );
 }
