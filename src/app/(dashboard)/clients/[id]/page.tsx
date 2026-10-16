@@ -1,19 +1,11 @@
-import {
-  CircleAlert,
-  Clock,
-  FileText,
-  History,
-  Inbox,
-  Lock,
-  Plus,
-} from "lucide-react";
+import { CircleAlert, Clock, FileText, History, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
-import { Pagination } from "@/components/data/pagination";
+import { RequestsTab } from "@/components/requests/requests-tab";
 import { ExpirationFormSheet } from "@/components/expirations/expiration-form-sheet";
 import { ExpirationRowActions } from "@/components/expirations/expiration-row-actions";
 import { ExpirationStatusBadge } from "@/components/expirations/expiration-status-badge";
@@ -27,8 +19,6 @@ import { cn } from "@/lib/utils";
 import {
   getClientDetail,
   listClientExpirations,
-  listClientRequests,
-  REQUESTS_PAGE_SIZE,
   type ClientDetail,
   type ClientExpiration,
 } from "@/services/clients/get-client";
@@ -36,6 +26,7 @@ import {
   getResponsibleChoices,
   type ResponsibleOption,
 } from "@/services/expirations/responsibles";
+import { requestFiltersSchema } from "@/services/requests/list-client-requests";
 
 export const metadata: Metadata = {
   title: "Cliente — Controle de Vencimentos",
@@ -123,7 +114,13 @@ async function ClientContent({
             scope="current"
           />
         )}
-        {tab === "solicitacoes" && <RequestsTab client={client} page={page} />}
+        {tab === "solicitacoes" && (
+          <RequestsTab
+            clientId={client.id}
+            acessoriasCompanyId={client.acessoriasCompanyId}
+            filters={requestFiltersSchema.parse(query)}
+          />
+        )}
         {tab === "historico" && (
           <ExpirationsTab
             client={clientRef}
@@ -457,125 +454,6 @@ async function ExpirationsTab({
             </tbody>
           </table>
         </div>
-      )}
-    </Card>
-  );
-}
-
-const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
-  timeZone: "America/Sao_Paulo",
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
-
-function formatInstantDate(value: string | null): string {
-  return value ? dateTimeFormatter.format(new Date(value)) : "—";
-}
-
-async function RequestsTab({
-  client,
-  page,
-}: {
-  client: ClientDetail;
-  page: number;
-}) {
-  const { items, total } = await listClientRequests(
-    client.acessoriasCompanyId,
-    page,
-  );
-
-  return (
-    <Card className="gap-4 px-5 py-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-semibold">
-          Solicitações{" "}
-          <span className="font-normal text-muted-foreground tabular-nums">
-            ({total})
-          </span>
-        </h2>
-        <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-          <Lock className="size-3.5" aria-hidden />
-          Somente leitura
-        </span>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Solicitações da Legalização no Acessórias, atualizadas diariamente.
-      </p>
-      {items.length === 0 ? (
-        <EmptyTab
-          icon={Inbox}
-          title="Nenhuma solicitação sincronizada"
-          description="Só aparecem solicitações da Legalização atualizadas a partir de 90 dias antes da primeira sincronização."
-        />
-      ) : (
-        <>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[860px] text-sm">
-              <thead className="bg-muted/60 text-left">
-                <tr>
-                  {[
-                    "ID",
-                    "Assunto",
-                    "Tipo",
-                    "Prioridade",
-                    "Status",
-                    "Responsável",
-                    "Abertura",
-                    "Prazo",
-                  ].map((header) => (
-                    <th
-                      key={header}
-                      scope="col"
-                      className="px-4 py-3 font-semibold"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((request) => (
-                  <tr key={request.id} className="border-t">
-                    <td className="px-4 py-3 tabular-nums">
-                      {request.acessoriasRequestId}
-                    </td>
-                    <td className="max-w-xs px-4 py-3 font-medium">
-                      {request.subject ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">{request.type ?? "—"}</td>
-                    <td className="px-4 py-3">{request.priority ?? "—"}</td>
-                    <td className="px-4 py-3">{request.status ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      {request.officeResponsibles
-                        .map(displayPersonName)
-                        .join(", ") || "—"}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">
-                      {formatInstantDate(request.openedAt)}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">
-                      {formatInstantDate(request.dueAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Pagination
-            page={page}
-            pageSize={REQUESTS_PAGE_SIZE}
-            total={total}
-            pageSizes={[REQUESTS_PAGE_SIZE]}
-            hrefFor={(target) =>
-              hrefWith(
-                `/clients/${client.id}`,
-                {},
-                { aba: "solicitacoes", pagina: target },
-              )
-            }
-          />
-        </>
       )}
     </Card>
   );

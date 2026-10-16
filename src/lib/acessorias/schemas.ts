@@ -76,3 +76,29 @@ export type AcessoriasDepartment = z.infer<typeof acessoriasDepartmentSchema>;
 export type AcessoriasCompany = z.infer<typeof acessoriasCompanySchema>;
 export type AcessoriasUser = z.infer<typeof acessoriasUserSchema>;
 export type AcessoriasRequest = z.infer<typeof acessoriasRequestSchema>;
+
+const attachmentSchema = z.object({ Nome: text, Url: text });
+
+const interactionSchema = z.object({
+  CmtUsuario: text,
+  CmtDH: text,
+  CmtTipo: text,
+  CmtText: text,
+  CmtAnx: z
+    .array(attachmentSchema)
+    .nullish()
+    .transform((value) => value ?? []),
+});
+
+/** Detalhe de `/requests/{SolID}`: interações vêm agrupadas em listas aninhadas. */
+export const acessoriasRequestDetailSchema = acessoriasRequestSchema.extend({
+  SolUsuarioFinalizador: text,
+  SolInteracoes: z
+    .array(z.union([interactionSchema, z.array(interactionSchema)]))
+    .nullish()
+    .transform((groups) => (groups ?? []).flat()),
+});
+
+export type AcessoriasRequestDetail = z.infer<
+  typeof acessoriasRequestDetailSchema
+>;

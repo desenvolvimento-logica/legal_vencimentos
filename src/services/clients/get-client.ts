@@ -35,20 +35,6 @@ export type ClientExpiration = {
   status: ExpirationStatus;
 };
 
-export type ClientRequest = {
-  id: string;
-  acessoriasRequestId: string;
-  subject: string | null;
-  type: string | null;
-  priority: string | null;
-  status: string | null;
-  departmentName: string | null;
-  officeResponsibles: string[];
-  openedAt: string | null;
-  dueAt: string | null;
-  lastUpdateAt: string | null;
-};
-
 const uuidSchema = z.uuid();
 
 /**
@@ -130,45 +116,4 @@ export async function listClientExpirations(
     cancellationReason: row.cancellation_reason,
     status: row.status,
   }));
-}
-
-export const REQUESTS_PAGE_SIZE = 20;
-
-/** Solicitações (cache somente leitura) do cliente, mais recentes primeiro. */
-export async function listClientRequests(
-  acessoriasCompanyId: string,
-  page: number,
-): Promise<{ items: ClientRequest[]; total: number }> {
-  const supabase = await createSupabaseServerClient();
-  const from = (page - 1) * REQUESTS_PAGE_SIZE;
-  const { data, count, error } = await supabase
-    .from("legal_acessorias_requests")
-    .select(
-      "id, acessorias_request_id, subject, request_type, priority, status, department_name, office_responsibles, opened_at, due_at, last_update_at",
-      { count: "exact" },
-    )
-    .eq("acessorias_company_id", acessoriasCompanyId)
-    .order("last_update_at", { ascending: false, nullsFirst: false })
-    .order("id")
-    .range(from, from + REQUESTS_PAGE_SIZE - 1);
-  if (error) throw new Error("Não foi possível carregar as solicitações.");
-
-  return {
-    total: count ?? 0,
-    items: data.map((row) => ({
-      id: row.id,
-      acessoriasRequestId: row.acessorias_request_id,
-      subject: row.subject,
-      type: row.request_type,
-      priority: row.priority,
-      status: row.status,
-      departmentName: row.department_name,
-      officeResponsibles: Array.isArray(row.office_responsibles)
-        ? row.office_responsibles.map(String)
-        : [],
-      openedAt: row.opened_at,
-      dueAt: row.due_at,
-      lastUpdateAt: row.last_update_at,
-    })),
-  };
 }

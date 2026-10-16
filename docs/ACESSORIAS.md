@@ -190,7 +190,7 @@ Confirmados na documentação oficial e com chamadas reais somente leitura (só 
 | Empresas | `GET /companies/ListAll?departments=5,13&DtLastDH=…&Pagina=N` | `departments` filtra os departamentos retornados em `Departamentos[]` (`ID`, `Nome`, `RespNome`, `RespEmail`). Não há ID do usuário responsável. `DtLastDH` aceita ISO 8601 ou `aaaa-mm-dd hh:mm:ss`. ~2.009 empresas (101 páginas). |
 | Usuários | `GET /users/ListAll?Pagina=N` | Campos `id`, `nome`, `email`, `status`. Sem filtro incremental. ~343 usuários. |
 | Solicitações | `GET /requests/ListAll?SolUltAtIni=aaaa-mm-dd&Pagina=N` | **Sem filtro de departamento ou empresa**; ~258 mil no total. O filtro por departamento (`DptoID` 5/13) é feito após o download. Atualizadas por dia: ~57 páginas. |
-| Detalhe | `GET /requests/{SolID}` | Interações em `SolInteracoes`, anexos em `CmtAnx` (`Nome`, `Url`). Usado na Fase 7. |
+| Detalhe | `GET /requests/{SolID}` | Retorna lista com 1 item. `SolInteracoes` é uma lista de listas de interações (`CmtUsuario`, `CmtDH`, `CmtTipo`, `CmtText` com quebras ``, `CmtAnx`). Anexos (`Nome`, `Url`) ficam em `https://app.acessorias.com/…?AnxKey=…` e são **públicos**: só o servidor os acessa (Fase 7). |
 
 - Datas/hora chegam como `dd/mm/aaaa hh:mm:ss` no horário de Brasília, sem fuso; são convertidas para UTC (`src/lib/acessorias/dates.ts`).
 - Paginação: 20 itens por página; termina na lista vazia. HTTP 204 = sem conteúdo.

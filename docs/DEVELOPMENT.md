@@ -271,6 +271,13 @@ Regras de ciclo de vida (decididas pelo responsável em 16/10/2026; `legal_016`,
 - detalhe server-side, timeline e anexos;
 - garantir ausência de mutações.
 
+Estado (16/10/2026): implementada (mockup 08), na aba Solicitações do cliente.
+- **Lista:** filtros de status, tipo, responsável e período de abertura. Os valores possíveis vêm do cache do próprio cliente.
+- **Detalhe:** ao abrir, consulta `/requests/{SolID}` no servidor, só depois de confirmar pelo RLS que a solicitação pertence a um cliente visível. Mostra os dados, a linha do tempo das interações e os anexos. É somente leitura, sem nenhuma mutação.
+- **Anexos via servidor** (decisão de 16/10/2026): as URLs do Acessórias são públicas (`app.acessorias.com/…?AnxKey=…` responde sem autenticação), então nunca chegam ao navegador.
+  - O navegador recebe uma chave opaca (hash da URL). `/api/requests/[solId]/attachments/[key]` exige perfil ativo, revalida o acesso e baixa só de `https://app.acessorias.com`, sem seguir redirecionamentos.
+  - O arquivo é repassado com limite de 50 MB e nome sanitizado.
+
 ### Fase 8 — Administração
 
 - usuários, árvore, integrações e auditoria;
@@ -381,8 +388,8 @@ Não criar branches ou commits automaticamente quando a tarefa atual não pedir 
 Estas questões não invalidam o escopo já definido, mas precisam ser resolvidas antes da parte afetada:
 
 1. Qual tamanho padrão/máximo de página e quais limites máximos de strings devem ser adotados? Proposta aplicada nas migrations, sujeita a revisão: nomes e órgão emissor até 200 caracteres, número do documento até 100, observações até 2000.
-2. Como anexos do Acessórias serão entregues com segurança: URL temporária, proxy autorizado ou outro mecanismo?
-3. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
-4. **Subordinados inativos no escopo:** a implementação mantém a carteira de um subordinado inativo visível ao gestor, para que não fique órfã. Confirmar se é o comportamento desejado.
-5. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
+2. Qual política corporativa de backup, retenção de auditoria e retenção de logs deve ser aplicada?
+3. **Subordinados inativos no escopo:** a implementação mantém a carteira de um subordinado inativo visível ao gestor, para que não fique órfã. Confirmar se é o comportamento desejado.
+4. `npm audit` aponta 5 vulnerabilidades altas em `braces`, na cadeia de dependências de desenvolvimento do `eslint-config-next` 16.4.1. A correção sugerida rebaixa o pacote para a versão 14, então fica pendente até sair uma versão corrigida. Isso não afeta o bundle de produção.
+
 Ao obter uma resposta, atualizar o documento técnico correspondente e remover a questão desta lista.
