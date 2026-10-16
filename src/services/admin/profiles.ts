@@ -104,3 +104,29 @@ export function filterProfiles(
     items: filtered.slice(from, from + params.porPagina),
   };
 }
+
+/**
+ * Quantos clientes ativos cada e-mail tem na carteira (departamentos 5/13),
+ * contados uma vez por cliente. Usado na árvore de hierarquia.
+ */
+export async function clientCountsByEmail(): Promise<Map<string, number>> {
+  const supabase = await createSupabaseServerClient();
+  const clientsByEmail = new Map<string, Set<string>>();
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("legal_client_responsibles")
+      .select("client_id, responsible_email")
+      .not("responsible_email", "is", null)
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error("Não foi possível contar as carteiras.");
+    for (const row of data) {
+      const set = clientsByEmail.get(row.responsible_email!) ?? new Set();
+      set.add(row.client_id);
+      clientsByEmail.set(row.responsible_email!, set);
+    }
+    if (data.length < PAGE) break;
+  }
+  return new Map([...clientsByEmail].map(([email, set]) => [email, set.size]));
+}

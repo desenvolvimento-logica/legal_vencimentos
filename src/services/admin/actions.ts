@@ -106,3 +106,39 @@ export async function updateProfile(
   refresh();
   return { ok: true };
 }
+
+/** Troca só o gestor (tela Hierarquia), mantendo os demais campos do perfil. */
+export async function changeManager(
+  input: unknown,
+): Promise<AdminActionResult> {
+  const parsed = z
+    .object({
+      profileId: z.uuid(),
+      managerId: z.union([z.literal(""), z.uuid()]),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Dados inválidos." };
+  const supabase = await adminClient();
+  if (!supabase) return DENIED;
+
+  const { data: current, error: readError } = await supabase
+    .from("legal_profiles")
+    .select("name, job_title, hierarchy_level, active")
+    .eq("id", parsed.data.profileId)
+    .maybeSingle();
+  if (readError || !current)
+    return { ok: false, error: "Perfil não encontrado." };
+
+  const { error } = await supabase.rpc("legal_admin_update_profile", {
+    target_profile_id: parsed.data.profileId,
+    profile_name: current.name,
+    profile_job_title: current.job_title ?? "",
+    profile_level: current.hierarchy_level,
+    // Os tipos gerados não marcam argumentos de RPC como anuláveis; null = sem gestor.
+    profile_manager_id: parsed.data.managerId || (null as unknown as string),
+    profile_active: current.active,
+  });
+  if (error) return { ok: false, error: userMessageFromDbError(error) };
+  refresh();
+  return { ok: true };
+}

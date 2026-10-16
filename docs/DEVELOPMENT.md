@@ -288,7 +288,12 @@ Estado (16/10/2026): usuários (mockup 09) implementados.
 - **Adicionar usuário:** escolhe uma conta Microsoft já existente em `auth.users` que ainda não tem perfil (`legal_admin_list_profile_candidates`) e define nome, cargo, nível e gestor.
 - **Editar usuário:** nome, cargo, nível, gestor e ativo. O e-mail vem da conta Microsoft. Os gestores possíveis são os perfis ativos de nível acima, e o banco revalida a hierarquia.
 - **Funções `legal_admin_*`** (`legal_018`): SECURITY DEFINER, exigem ADMIN e gravam auditoria (`PROFILE_CREATED`, `PROFILE_UPDATED`, `PROFILE_LEVEL_CHANGED`, `PROFILE_MANAGER_CHANGED`, `PROFILE_ACTIVATED`, `PROFILE_DEACTIVATED`). O ADMIN não consegue se desativar nem se rebaixar.
-- **Pendente:** hierarquia (mockup 10), integrações (06) e auditoria (11).
+- **`/admin/hierarchy`** (mockup 10):
+  - árvore indentada a partir de `manager_id`, sem o ADMIN, com nível sempre indicado por ícone e rótulo e a contagem de clientes da carteira;
+  - aviso de usuários sem gestor e busca que mantém o caminho até a pessoa;
+  - painel para trocar o gestor (`changeManager` → `legal_admin_update_profile`, com auditoria).
+  - Usa árvore indentada em vez do organograma horizontal do mockup, que não cabe em telas estreitas.
+- **Pendente:** integrações (mockup 06) e auditoria (11).
 
 ### Fase 9 — Dashboard
 

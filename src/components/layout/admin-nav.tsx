@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck, UserCog, type LucideIcon } from "lucide-react";
+import { Network, ShieldCheck, UserCog, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,6 +11,7 @@ type AdminItem = { href: string; label: string; icon: LucideIcon };
 // Itens entram conforme as telas da Fase 8 existirem (docs/UI-MOCKUPS.md §6).
 const ADMIN_ITEMS: AdminItem[] = [
   { href: "/admin/users", label: "Usuários", icon: UserCog },
+  { href: "/admin/hierarchy", label: "Hierarquia", icon: Network },
 ];
 
 /** Grupo Administração da sidebar; renderizado só para ADMIN (decidido no servidor). */
