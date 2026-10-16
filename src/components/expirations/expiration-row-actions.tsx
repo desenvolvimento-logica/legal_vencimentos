@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   Pencil,
   RefreshCw,
+  Send,
   Trash2,
   Undo2,
 } from "lucide-react";
@@ -47,7 +48,9 @@ import {
   cancelExpiration,
   concludeRenewal,
   deleteExpiration,
+  markQuoteSent,
   startRenewal,
+  withdrawQuote,
   type ActionResult,
 } from "@/services/expirations/actions";
 import type { ResponsibleOption } from "@/services/expirations/responsibles";
@@ -82,7 +85,9 @@ export function ExpirationRowActions({
   const period = expiration.values.renewalPeriod;
   const periodic = isRenewalPeriod(period);
   const editable =
-    expiration.status === "ACTIVE" || expiration.status === "RENEWING";
+    expiration.status === "ACTIVE" ||
+    expiration.status === "QUOTE_SENT" ||
+    expiration.status === "RENEWING";
   if (!editable) return null;
 
   function run(action: () => Promise<ActionResult>, success: string) {
@@ -117,15 +122,44 @@ export function ExpirationRowActions({
             <Pencil aria-hidden />
             Editar
           </DropdownMenuItem>
-          {expiration.status === "ACTIVE" ? (
-            <DropdownMenuItem
-              onClick={() =>
-                run(() => startRenewal(expiration.id), "Renovação iniciada.")
-              }
-            >
-              <RefreshCw aria-hidden />
-              Iniciar renovação
-            </DropdownMenuItem>
+          {expiration.status === "ACTIVE" ||
+          expiration.status === "QUOTE_SENT" ? (
+            <>
+              {expiration.status === "ACTIVE" && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    run(
+                      () => markQuoteSent(expiration.id),
+                      "Orçamento marcado como enviado.",
+                    )
+                  }
+                >
+                  <Send aria-hidden />
+                  Orçamento enviado
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() =>
+                  run(() => startRenewal(expiration.id), "Renovação iniciada.")
+                }
+              >
+                <RefreshCw aria-hidden />
+                Iniciar renovação
+              </DropdownMenuItem>
+              {expiration.status === "QUOTE_SENT" && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    run(
+                      () => withdrawQuote(expiration.id),
+                      "Orçamento recusado; o vencimento voltou a vigente.",
+                    )
+                  }
+                >
+                  <Undo2 aria-hidden />
+                  Orçamento recusado
+                </DropdownMenuItem>
+              )}
+            </>
           ) : (
             <>
               {periodic ? (

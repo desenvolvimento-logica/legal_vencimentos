@@ -116,7 +116,7 @@ A relação hierárquica é formada por `legal_profiles.manager_id`. A semântic
 
 ### RF-07 — Estado e vencimento calculado
 
-Estados persistidos: `ACTIVE`, `RENEWING`, `RENEWED`, `EXPIRED` e `CANCELLED`.
+Estados persistidos: `ACTIVE`, `QUOTE_SENT` (orçamento enviado), `RENEWING`, `RENEWED`, `EXPIRED` e `CANCELLED`. `QUOTE_SENT` e `RENEWING` contam como vigentes.
 
 Apresentar como vencido quando `expiration_date < current_date` e o estado persistido for `ACTIVE`, mesmo sem job que grave `EXPIRED`. A lógica usa `America/Sao_Paulo`, não o fuso implícito do navegador.
 
@@ -132,7 +132,7 @@ Combinar sempre texto, ícone e badge; cor isolada não é suficiente.
 
 ### RF-08 — Renovação
 
-1. Um vencimento `ACTIVE` recebe “Iniciar renovação”.
+1. Um vencimento `ACTIVE` recebe “Orçamento enviado” (opcional) ou “Iniciar renovação”. Em `QUOTE_SENT` (orçamento de renovação enviado ao cliente), a data de envio é gravada pelo banco; dali o vencimento segue para “Iniciar renovação”, volta a `ACTIVE` (“Orçamento recusado”) ou é cancelado. A data de vencimento só é editável em `ACTIVE`.
 2. O registro atual muda para `RENEWING` e gera auditoria.
 3. Ao concluir, uma operação atômica muda o anterior para `RENEWED` e cria outro `ACTIVE`.
 4. O novo aponta para o anterior por `previous_expiration_id`.

@@ -23,6 +23,7 @@ export type ExpirationRecord = {
   notes: string | null;
   cancellationReason: string | null;
   renewedAt: string | null;
+  quoteSentAt: string | null;
   createdAt: string;
 };
 
@@ -36,7 +37,7 @@ export type ExpirationWithChain = {
 };
 
 const SELECT =
-  "id, client_id, expiration_type, document_name, document_number, issuer, issue_date, expiration_date, status, previous_expiration_id, renewal_period, reminder_days, responsible_user_id, notes, cancellation_reason, renewed_at, created_at";
+  "id, client_id, expiration_type, document_name, document_number, issuer, issue_date, expiration_date, status, previous_expiration_id, renewal_period, reminder_days, responsible_user_id, notes, cancellation_reason, renewed_at, quote_sent_at, created_at";
 
 /** Limite de segurança ao percorrer a cadeia (ela é acíclica por construção). */
 const MAX_CHAIN = 50;
@@ -58,6 +59,7 @@ type Row = {
   notes: string | null;
   cancellation_reason: string | null;
   renewed_at: string | null;
+  quote_sent_at: string | null;
   created_at: string;
 };
 
@@ -79,6 +81,7 @@ function toRecord(row: Row): ExpirationRecord {
     notes: row.notes,
     cancellationReason: row.cancellation_reason,
     renewedAt: row.renewed_at,
+    quoteSentAt: row.quote_sent_at,
     createdAt: row.created_at,
   };
 }

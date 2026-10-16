@@ -3,13 +3,13 @@ import type { Enums } from "@/types/database";
 export type ExpirationStatus = Enums<"legal_expiration_status">;
 
 export type DisplayTone =
-  "danger" | "orange" | "warning" | "info" | "success" | "neutral";
+  "danger" | "orange" | "warning" | "info" | "success" | "neutral" | "quote";
 
 export type DisplayStatus = {
   /** Rótulo exibido sempre junto do ícone (cor nunca é a única pista). */
   label: string;
   tone: DisplayTone;
-  icon: "alert" | "clock" | "calendar" | "refresh" | "check" | "ban";
+  icon: "alert" | "clock" | "calendar" | "refresh" | "check" | "ban" | "send";
   /** Dias até o vencimento (negativo = vencido). */
   daysLeft: number;
 };
@@ -42,6 +42,13 @@ export function displayStatus(
       return { label: "Cancelado", tone: "neutral", icon: "ban", daysLeft };
     case "RENEWING":
       return { label: "Em renovação", tone: "info", icon: "refresh", daysLeft };
+    case "QUOTE_SENT":
+      return {
+        label: "Orçamento enviado",
+        tone: "quote",
+        icon: "send",
+        daysLeft,
+      };
     case "EXPIRED":
       return { label: "Vencido", tone: "danger", icon: "alert", daysLeft };
     case "ACTIVE":

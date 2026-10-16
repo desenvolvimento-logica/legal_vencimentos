@@ -4,6 +4,7 @@ import {
   CircleCheck,
   Clock,
   RefreshCw,
+  Send,
   TriangleAlert,
 } from "lucide-react";
 
@@ -20,6 +21,7 @@ const ICONS = {
   refresh: RefreshCw,
   check: CircleCheck,
   ban: Ban,
+  send: Send,
 } as const;
 
 /** Fundo claro + texto escuro da mesma cor (docs/UI-MOCKUPS.md §4). */
@@ -30,6 +32,7 @@ const TONES: Record<DisplayTone, string> = {
   info: "bg-info/10 text-info",
   success: "bg-success/10 text-success",
   neutral: "bg-muted text-muted-foreground",
+  quote: "bg-quote/10 text-quote",
 };
 
 /** Badge de situação: ícone, texto e cor juntos (SRS RF-07). */

@@ -1,8 +1,10 @@
-/** Rótulos das ações gravadas em legal_audit_logs (legal_006/016/018). */
+/** Rótulos das ações gravadas em legal_audit_logs (legal_006/016/018/022). */
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
   EXPIRATION_CREATED: "Criou vencimento",
   EXPIRATION_UPDATED: "Editou vencimento",
   EXPIRATION_RESPONSIBLE_CHANGED: "Trocou responsável",
+  EXPIRATION_QUOTE_SENT: "Enviou orçamento",
+  EXPIRATION_QUOTE_WITHDRAWN: "Orçamento recusado",
   EXPIRATION_RENEWAL_STARTED: "Iniciou renovação",
   EXPIRATION_RENEWAL_ABANDONED: "Desistiu da renovação",
   EXPIRATION_RENEWED: "Concluiu renovação",
@@ -27,7 +29,7 @@ export type AuditTone = "create" | "update" | "renewal" | "danger";
 
 export function auditTone(action: string): AuditTone {
   if (/DELETED|CANCELLED|DEACTIVATED/.test(action)) return "danger";
-  if (/RENEW/.test(action)) return "renewal";
+  if (/RENEW|QUOTE/.test(action)) return "renewal";
   if (/CREATED|ACTIVATED/.test(action)) return "create";
   return "update";
 }

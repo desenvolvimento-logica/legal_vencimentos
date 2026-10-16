@@ -8,6 +8,7 @@ export const EXPIRATION_METRICS = [
   "next7",
   "next15",
   "next30",
+  "quoteSent",
   "renewing",
   "renewedThisMonth",
 ] as const;
@@ -19,6 +20,7 @@ export const METRIC_LABELS: Record<ExpirationMetric, string> = {
   next7: "Próximos 7 dias",
   next15: "Próximos 15 dias",
   next30: "Próximos 30 dias",
+  quoteSent: "Orçamentos enviados",
   renewing: "Em renovação",
   renewedThisMonth: "Renovados no mês",
 };
@@ -29,11 +31,12 @@ export const METRIC_LIST_HREF: Record<ExpirationMetric, string> = {
   next7: "/expirations?periodo=7",
   next15: "/expirations?periodo=15",
   next30: "/expirations?periodo=30",
+  quoteSent: "/expirations?situacao=orcamento-enviado",
   renewing: "/expirations?situacao=em-renovacao",
   renewedThisMonth: "/expirations?situacao=renovados",
 };
 
-const CURRENT: ExpirationStatus[] = ["ACTIVE", "RENEWING"];
+const CURRENT: ExpirationStatus[] = ["ACTIVE", "QUOTE_SENT", "RENEWING"];
 
 /** Subconjunto dos filtros do PostgREST usado pelas regras abaixo. */
 type Filterable<Q> = {
@@ -74,6 +77,8 @@ export function applyMetricFilter<Q extends Filterable<Q>>(
           "expiration_date",
           addCivilDays(today, Number(metric.replace("next", ""))),
         );
+    case "quoteSent":
+      return query.eq("status", "QUOTE_SENT");
     case "renewing":
       return query.eq("status", "RENEWING");
     case "renewedThisMonth":

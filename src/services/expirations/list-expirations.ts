@@ -21,6 +21,7 @@ export const SITUATIONS = {
   vigentes: "Vigentes",
   vencidos: "Vencidos",
   "a-vencer": "A vencer",
+  "orcamento-enviado": "Orçamento enviado",
   "em-renovacao": "Em renovação",
   renovados: "Renovados",
   cancelados: "Cancelados",
@@ -97,7 +98,7 @@ export type ExpirationListItem = {
   reminderDays: number | null;
 };
 
-const CURRENT: ExpirationStatus[] = ["ACTIVE", "RENEWING"];
+const CURRENT: ExpirationStatus[] = ["ACTIVE", "QUOTE_SENT", "RENEWING"];
 
 /**
  * Vencimentos visíveis ao usuário (view com security_invoker). `today` é a
@@ -141,6 +142,9 @@ export async function listExpirations(
         break;
       case "a-vencer":
         query = query.eq("status", "ACTIVE").gte("expiration_date", today);
+        break;
+      case "orcamento-enviado":
+        query = query.eq("status", "QUOTE_SENT");
         break;
       case "em-renovacao":
         query = query.eq("status", "RENEWING");

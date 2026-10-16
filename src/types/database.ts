@@ -272,6 +272,7 @@ export type Database = {
           issuer: string | null;
           notes: string | null;
           previous_expiration_id: string | null;
+          quote_sent_at: string | null;
           reminder_date: string | null;
           reminder_days: number | null;
           renewal_period:
@@ -297,6 +298,7 @@ export type Database = {
           issuer?: string | null;
           notes?: string | null;
           previous_expiration_id?: string | null;
+          quote_sent_at?: string | null;
           reminder_date?: string | null;
           reminder_days?: number | null;
           renewal_period?:
@@ -322,6 +324,7 @@ export type Database = {
           issuer?: string | null;
           notes?: string | null;
           previous_expiration_id?: string | null;
+          quote_sent_at?: string | null;
           reminder_date?: string | null;
           reminder_days?: number | null;
           renewal_period?:
@@ -615,7 +618,12 @@ export type Database = {
     };
     Enums: {
       legal_expiration_status:
-        "ACTIVE" | "RENEWING" | "RENEWED" | "EXPIRED" | "CANCELLED";
+        | "ACTIVE"
+        | "RENEWING"
+        | "QUOTE_SENT"
+        | "RENEWED"
+        | "EXPIRED"
+        | "CANCELLED";
       legal_expiration_type: "CERTIDAO" | "LICENCA" | "CERTIFICADO";
       legal_hierarchy_level:
         "USER" | "LEADER" | "COORDINATOR" | "MANAGER" | "DIRECTOR" | "ADMIN";

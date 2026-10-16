@@ -165,6 +165,7 @@ Cache dos usuários do Acessórias. Não concede acesso à aplicação.
 | `renewed_at` | TIMESTAMPTZ NULL; preenchido quando o registro passa a `RENEWED` (base do indicador “renovados no mês”) |
 | `renewal_period` | `legal_renewal_period` NULL (legal_020); exige `issue_date`, e o trigger define `expiration_date` = emissão + período |
 | `reminder_days` | SMALLINT NULL, 1 a 365 (legal_020) |
+| `quote_sent_at` | TIMESTAMPTZ NULL; gravada pelo trigger ao entrar em `QUOTE_SENT`, não editável (legal_022) |
 | `reminder_date` | DATE gerada: `expiration_date - reminder_days` (legal_020); índice parcial por responsável para o popup de lembretes |
 | `created_by` | UUID NOT NULL, FK `legal_profiles(id)` com `ON DELETE RESTRICT` |
 | `updated_by` | UUID NOT NULL, FK `legal_profiles(id)` com `ON DELETE RESTRICT` |
@@ -341,6 +342,8 @@ Os arquivos também usam o prefixo do sistema: `legal_NNN_descricao.sql`.
 18. `legal_018_admin_profiles.sql` — funções administrativas de perfis (candidatos Microsoft sem perfil, criação e edição com validação de hierarquia, auditoria e proteção contra o admin se bloquear).
 19. `legal_019_harden_assign_responsible.sql` — `legal_can_assign_responsible` exige perfil ativo e acesso ao cliente (revisão de segurança).
 20. `legal_020_expiration_period_reminder.sql` — periodicidade (`renewal_period`) e lembrete (`reminder_days`, `reminder_date` gerada) em `legal_expirations`; trigger `legal_expirations_apply_period` calcula o vencimento; `legal_complete_renewal` copia periodicidade/lembrete e, com periodicidade, conta o novo período da conclusão.
+21. `legal_021_quote_sent_status.sql` — acrescenta `QUOTE_SENT` a `legal_expiration_status`. Aplicar sozinha, antes da 022 (valor novo de enum não pode ser usado na mesma transação).
+22. `legal_022_quote_sent_rules.sql` — transições de `QUOTE_SENT`, `quote_sent_at` gravada pelo trigger, auditoria `EXPIRATION_QUOTE_SENT`/`EXPIRATION_QUOTE_WITHDRAWN`, `QUOTE_SENT` como vigente em `legal_client_overview` e no índice de lembretes.
 
 As migrations são aplicadas manualmente pelo responsável (SQL Editor), não por `supabase db push`, para não interferir no histórico de migrations dos outros sistemas. Toda migration deve ser idempotente quando seguro, pequena, revisável e acompanhada de caminho de rollback documentado. Não executar a migration contra o banco corporativo sem inspecionar o ambiente alvo.
 

@@ -84,7 +84,7 @@ async function DashboardContent({
     <>
       <section
         aria-label="Indicadores"
-        className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-7"
+        className="grid grid-cols-2 gap-4 md:grid-cols-4 2xl:grid-cols-8"
       >
         <Link
           href="/clients"
@@ -103,6 +103,7 @@ async function DashboardContent({
             ["next7", metrics.next7],
             ["next15", metrics.next15],
             ["next30", metrics.next30],
+            ["quoteSent", metrics.quoteSent],
             ["renewing", metrics.renewing],
             ["renewedThisMonth", metrics.renewedThisMonth],
           ] as const
@@ -243,8 +244,8 @@ function DashboardSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true">
       <span className="sr-only">Carregando indicadores…</span>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-7">
-        {Array.from({ length: 7 }, (_, index) => (
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 2xl:grid-cols-8">
+        {Array.from({ length: 8 }, (_, index) => (
           <div key={index} className="h-36 animate-pulse rounded-xl bg-muted" />
         ))}
       </div>

@@ -85,7 +85,12 @@ export async function getClientDetail(
   };
 }
 
-const CURRENT_STATUSES: ExpirationStatus[] = ["ACTIVE", "RENEWING", "EXPIRED"];
+const CURRENT_STATUSES: ExpirationStatus[] = [
+  "ACTIVE",
+  "QUOTE_SENT",
+  "RENEWING",
+  "EXPIRED",
+];
 const HISTORY_STATUSES: ExpirationStatus[] = ["RENEWED", "CANCELLED"];
 
 /** Vencimentos vigentes (`current`) ou encerrados (`history`) do cliente. */

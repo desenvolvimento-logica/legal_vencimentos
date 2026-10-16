@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export type MetricTone =
-  "neutral" | "danger" | "orange" | "warning" | "info" | "success";
+  "neutral" | "danger" | "orange" | "warning" | "info" | "success" | "quote";
 
 const TONES: Record<MetricTone, { chip: string; value: string }> = {
   neutral: { chip: "bg-muted text-foreground", value: "text-foreground" },
@@ -16,6 +16,7 @@ const TONES: Record<MetricTone, { chip: string; value: string }> = {
   warning: { chip: "bg-warning/10 text-warning", value: "text-warning" },
   info: { chip: "bg-info/10 text-info", value: "text-info" },
   success: { chip: "bg-success/10 text-success", value: "text-success" },
+  quote: { chip: "bg-quote/10 text-quote", value: "text-quote" },
 };
 
 /** Visual de um indicador do Dashboard (docs/mockups/02-dashboard.png). */

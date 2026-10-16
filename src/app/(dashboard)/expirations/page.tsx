@@ -194,6 +194,7 @@ async function ExpirationsContent({
                           )}
                         >
                           {item.status === "ACTIVE" ||
+                          item.status === "QUOTE_SENT" ||
                           item.status === "RENEWING"
                             ? status.daysLeft
                             : "—"}

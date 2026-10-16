@@ -151,7 +151,7 @@ function NewRecordPanel({
     );
   }
 
-  if (expiration.status === "ACTIVE") {
+  if (expiration.status === "ACTIVE" || expiration.status === "QUOTE_SENT") {
     return (
       <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-5">
         <p className="text-muted-foreground">

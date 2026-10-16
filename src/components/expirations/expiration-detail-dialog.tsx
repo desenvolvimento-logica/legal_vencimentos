@@ -19,7 +19,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { addCivilDays, formatCivilDate } from "@/lib/dates";
+import {
+  addCivilDays,
+  formatCivilDate,
+  toBusinessCivilDate,
+} from "@/lib/dates";
 import { displayStatus } from "@/lib/expirations/display-status";
 import { RENEWAL_PERIOD_LABELS } from "@/lib/expirations/period";
 import { EXPIRATION_TYPE_LABELS } from "@/lib/labels";
@@ -178,7 +182,9 @@ function DetailBody({
     today,
   );
   const current =
-    expiration.status === "ACTIVE" || expiration.status === "RENEWING";
+    expiration.status === "ACTIVE" ||
+    expiration.status === "QUOTE_SENT" ||
+    expiration.status === "RENEWING";
   const history = chain.slice(1);
 
   const rows: [string, React.ReactNode][] = [
@@ -220,6 +226,10 @@ function DetailBody({
       ),
     ],
     ["Responsável", current ? responsibleName : null],
+    [
+      "Orçamento enviado em",
+      expiration.quoteSentAt && formatInstantDate(expiration.quoteSentAt),
+    ],
     ["Observações", expiration.notes],
   ];
   if (expiration.status === "RENEWED") {
@@ -334,6 +344,11 @@ function HistoryItem({
       <ExpirationStatusBadge status={status} />
     </li>
   );
+}
+
+/** Instante (timestamptz) → data em Brasília. */
+function formatInstantDate(value: string): string {
+  return formatCivilDate(toBusinessCivilDate(new Date(value)));
 }
 
 function daysText(daysLeft: number): string {

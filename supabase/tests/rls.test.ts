@@ -670,6 +670,130 @@ describe("vencimentos: periodicidade e lembrete (legal_020)", () => {
   });
 });
 
+describe("vencimentos: orçamento enviado (legal_022)", () => {
+  const setStatus = (tx: Transaction, id: string, status: string) =>
+    tx.query("update public.legal_expirations set status = $2 where id = $1", [
+      id,
+      status,
+    ]);
+
+  it("ACTIVE → QUOTE_SENT → RENEWING grava e preserva a data de envio", async () => {
+    const outcome = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA);
+      await setStatus(tx, id, "QUOTE_SENT");
+      const { rows: sent } = await tx.query<{ quote_sent_at: Date | null }>(
+        "select quote_sent_at from public.legal_expirations where id = $1",
+        [id],
+      );
+      await setStatus(tx, id, "RENEWING");
+      const { rows: renewing } = await tx.query<{
+        status: string;
+        quote_sent_at: Date | null;
+      }>(
+        "select status, quote_sent_at from public.legal_expirations where id = $1",
+        [id],
+      );
+      await tx.exec("reset role");
+      const { rows: audit } = await tx.query<{ action: string }>(
+        `select action from public.legal_audit_logs
+         where entity_id = $1 order by created_at, action`,
+        [id],
+      );
+      return { sent: sent[0], renewing: renewing[0], audit };
+    });
+
+    expect(outcome.sent.quote_sent_at).not.toBeNull();
+    expect(outcome.renewing.status).toBe("RENEWING");
+    expect(outcome.renewing.quote_sent_at).toEqual(outcome.sent.quote_sent_at);
+    expect(outcome.audit.map((row) => row.action)).toEqual(
+      expect.arrayContaining([
+        "EXPIRATION_QUOTE_SENT",
+        "EXPIRATION_RENEWAL_STARTED",
+      ]),
+    );
+  });
+
+  it("orçamento recusado volta a ACTIVE com auditoria própria", async () => {
+    const actions = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA);
+      await setStatus(tx, id, "QUOTE_SENT");
+      await setStatus(tx, id, "ACTIVE");
+      await tx.exec("reset role");
+      const { rows } = await tx.query<{ action: string }>(
+        "select action from public.legal_audit_logs where entity_id = $1",
+        [id],
+      );
+      return rows.map((row) => row.action);
+    });
+    expect(actions).toContain("EXPIRATION_QUOTE_WITHDRAWN");
+  });
+
+  it("data de envio não é editável", async () => {
+    const value = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA);
+      await tx.query(
+        "update public.legal_expirations set quote_sent_at = '2020-01-01' where id = $1",
+        [id],
+      );
+      const { rows } = await tx.query<{ quote_sent_at: Date | null }>(
+        "select quote_sent_at from public.legal_expirations where id = $1",
+        [id],
+      );
+      return rows[0].quote_sent_at;
+    });
+    expect(value).toBeNull();
+  });
+
+  it("de QUOTE_SENT não conclui renovação nem muda a data", async () => {
+    const outcome = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA);
+      await setStatus(tx, id, "QUOTE_SENT");
+      const date = await expectDbError(
+        tx.query(
+          "update public.legal_expirations set expiration_date = '2030-01-01' where id = $1",
+          [id],
+        ),
+      );
+      return { date };
+    });
+    expect(outcome.date).toMatch(/só pode ser corrigida em registros ativos/);
+
+    const renewal = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA);
+      await setStatus(tx, id, "QUOTE_SENT");
+      return expectDbError(
+        tx.query("select public.legal_complete_renewal($1, $2::jsonb)", [
+          id,
+          JSON.stringify({ expiration_date: "2027-12-31" }),
+        ]),
+      );
+    });
+    expect(renewal).toMatch(/precisa estar em renovação/);
+  });
+
+  it("RENEWING não volta para QUOTE_SENT", async () => {
+    const message = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA);
+      await setStatus(tx, id, "RENEWING");
+      return expectDbError(setStatus(tx, id, "QUOTE_SENT"));
+    });
+    expect(message).toMatch(/Mudança de situação não permitida/);
+  });
+
+  it("vencimento com orçamento enviado conta como vigente para o cliente", async () => {
+    const active = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.shared);
+      await setStatus(tx, id, "QUOTE_SENT");
+      const { rows } = await tx.query<{ active_expirations: number }>(
+        "select active_expirations from public.legal_client_overview where id = $1",
+        [C.shared],
+      );
+      return rows[0].active_expirations;
+    });
+    expect(active).toBe(1);
+  });
+});
+
 describe("legal_expiration_list (legal_017)", () => {
   it("lista só vencimentos de clientes visíveis, com busca por cliente", async () => {
     const result = await asUser(db, U.userA, async (tx) => {

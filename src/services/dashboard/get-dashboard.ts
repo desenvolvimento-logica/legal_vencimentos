@@ -16,6 +16,7 @@ export type DashboardMetrics = {
   next7: number;
   next15: number;
   next30: number;
+  quoteSent: number;
   renewing: number;
   renewedThisMonth: number;
 };
@@ -36,7 +37,7 @@ export type TypeDistribution = {
   count: number;
 }[];
 
-const CURRENT: ExpirationStatus[] = ["ACTIVE", "RENEWING"];
+const CURRENT: ExpirationStatus[] = ["ACTIVE", "QUOTE_SENT", "RENEWING"];
 
 /**
  * Indicadores do Dashboard (SRS RF-11), sempre limitados ao escopo do
@@ -61,6 +62,7 @@ export async function getDashboard(today: string, window: UpcomingWindow) {
     metric("next15"),
     metric("next30"),
     metric("renewing"),
+    metric("quoteSent"),
     applyMetricFilter(
       supabase
         .from("legal_expirations")
@@ -75,8 +77,17 @@ export async function getDashboard(today: string, window: UpcomingWindow) {
   if (counts.some((result) => result.error)) {
     throw new Error("Não foi possível carregar os indicadores.");
   }
-  const [clients, overdue, next7, next15, next30, renewing, renewed, ...types] =
-    counts.map((result) => result.count ?? 0);
+  const [
+    clients,
+    overdue,
+    next7,
+    next15,
+    next30,
+    renewing,
+    quoteSent,
+    renewed,
+    ...types
+  ] = counts.map((result) => result.count ?? 0);
 
   // Próximos vencimentos: vigentes até hoje + N dias, incluindo os já vencidos.
   const { data: upcoming, error } = await supabase
@@ -99,6 +110,7 @@ export async function getDashboard(today: string, window: UpcomingWindow) {
       next7,
       next15,
       next30,
+      quoteSent,
       renewing,
       renewedThisMonth: renewed,
     } satisfies DashboardMetrics,

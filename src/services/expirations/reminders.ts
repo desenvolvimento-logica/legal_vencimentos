@@ -45,7 +45,7 @@ export async function listReminders(
     .select(
       "id, client_id, document_name, expiration_type, expiration_date, status, reminder_days, responsible_user_id",
     )
-    .in("status", ["ACTIVE", "RENEWING"])
+    .in("status", ["ACTIVE", "QUOTE_SENT", "RENEWING"])
     .not("reminder_date", "is", null)
     .lte("reminder_date", today);
   if (responsibleId) query = query.eq("responsible_user_id", responsibleId);

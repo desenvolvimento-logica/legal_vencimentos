@@ -9,6 +9,7 @@ import {
   ExternalLink,
   RefreshCw,
   RotateCw,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -49,6 +50,7 @@ const METRIC_STYLE: Record<
   next7: { icon: Clock, tone: "orange" },
   next15: { icon: CalendarClock, tone: "warning" },
   next30: { icon: CalendarDays, tone: "info" },
+  quoteSent: { icon: Send, tone: "quote" },
   renewing: { icon: RefreshCw, tone: "info" },
   renewedThisMonth: { icon: CircleCheck, tone: "success" },
 };
@@ -157,7 +159,9 @@ export function MetricDialogCard({
                     result.today,
                   );
                   const current =
-                    item.status === "ACTIVE" || item.status === "RENEWING";
+                    item.status === "ACTIVE" ||
+                    item.status === "QUOTE_SENT" ||
+                    item.status === "RENEWING";
                   return (
                     <tr key={item.id} className="border-t">
                       <td className="px-3 py-2.5 font-medium">

@@ -42,7 +42,7 @@ describe("applyMetricFilter", () => {
 
   it("próximos N dias: vigentes de hoje até hoje + N, inclusivo", () => {
     expect(applyMetricFilter(new Recorder(), "next15", TODAY).calls).toEqual([
-      ["in", "status", ["ACTIVE", "RENEWING"]],
+      ["in", "status", ["ACTIVE", "QUOTE_SENT", "RENEWING"]],
       ["gte", "expiration_date", TODAY],
       ["lte", "expiration_date", "2026-10-31"],
     ]);

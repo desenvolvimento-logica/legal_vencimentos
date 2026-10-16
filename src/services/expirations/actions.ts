@@ -107,10 +107,12 @@ export async function updateExpiration(input: unknown): Promise<ActionResult> {
   return { ok: true, id: value.expirationId };
 }
 
+type CurrentStatus = "ACTIVE" | "QUOTE_SENT" | "RENEWING";
+
 async function setStatus(
   expirationId: string,
-  from: "ACTIVE" | "RENEWING",
-  to: "ACTIVE" | "RENEWING",
+  from: CurrentStatus[],
+  to: CurrentStatus,
 ): Promise<ActionResult> {
   const supabase = await authorizedClient();
   if (!supabase) return NO_SESSION;
@@ -118,7 +120,7 @@ async function setStatus(
     .from("legal_expirations")
     .update({ status: to })
     .eq("id", expirationId)
-    .eq("status", from)
+    .in("status", from)
     .select("id");
   if (error) return { ok: false, error: userMessageFromDbError(error) };
   if (data.length === 0) {
@@ -131,13 +133,31 @@ async function setStatus(
   return { ok: true, id: expirationId };
 }
 
-/** ACTIVE → RENEWING. */
+/** ACTIVE ou QUOTE_SENT → RENEWING. */
 export async function startRenewal(
   expirationId: string,
 ): Promise<ActionResult> {
   if (!isUuid(expirationId))
     return { ok: false, error: "Vencimento inválido." };
-  return setStatus(expirationId, "ACTIVE", "RENEWING");
+  return setStatus(expirationId, ["ACTIVE", "QUOTE_SENT"], "RENEWING");
+}
+
+/** ACTIVE → QUOTE_SENT; o banco grava a data de envio (legal_022). */
+export async function markQuoteSent(
+  expirationId: string,
+): Promise<ActionResult> {
+  if (!isUuid(expirationId))
+    return { ok: false, error: "Vencimento inválido." };
+  return setStatus(expirationId, ["ACTIVE"], "QUOTE_SENT");
+}
+
+/** QUOTE_SENT → ACTIVE (cliente recusou ou desistiu do orçamento). */
+export async function withdrawQuote(
+  expirationId: string,
+): Promise<ActionResult> {
+  if (!isUuid(expirationId))
+    return { ok: false, error: "Vencimento inválido." };
+  return setStatus(expirationId, ["QUOTE_SENT"], "ACTIVE");
 }
 
 /** RENEWING → ACTIVE (desistência). */
@@ -146,7 +166,7 @@ export async function abandonRenewal(
 ): Promise<ActionResult> {
   if (!isUuid(expirationId))
     return { ok: false, error: "Vencimento inválido." };
-  return setStatus(expirationId, "RENEWING", "ACTIVE");
+  return setStatus(expirationId, ["RENEWING"], "ACTIVE");
 }
 
 /** Conclui a renovação atomicamente: o anterior vira RENEWED e nasce o novo. */
@@ -206,7 +226,7 @@ export async function cancelExpiration(input: unknown): Promise<ActionResult> {
     .from("legal_expirations")
     .update({ status: "CANCELLED", cancellation_reason: parsed.data.reason })
     .eq("id", parsed.data.expirationId)
-    .in("status", ["ACTIVE", "RENEWING"])
+    .in("status", ["ACTIVE", "QUOTE_SENT", "RENEWING"])
     .select("id");
   if (error) return { ok: false, error: userMessageFromDbError(error) };
   if (data.length === 0) {

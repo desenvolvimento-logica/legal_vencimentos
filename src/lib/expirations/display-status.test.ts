@@ -32,6 +32,11 @@ describe("displayStatus", () => {
     expect(displayStatus("RENEWING", "2026-01-01", TODAY).label).toBe(
       "Em renovação",
     );
+    expect(displayStatus("QUOTE_SENT", "2026-01-01", TODAY)).toMatchObject({
+      label: "Orçamento enviado",
+      tone: "quote",
+      icon: "send",
+    });
     expect(displayStatus("RENEWED", "2026-01-01", TODAY).label).toBe(
       "Renovado",
     );

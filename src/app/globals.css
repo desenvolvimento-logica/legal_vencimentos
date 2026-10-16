@@ -12,6 +12,7 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-orange: var(--orange);
+  --color-quote: var(--quote);
   --color-danger: var(--danger);
   --color-info: var(--info);
   --color-background: var(--background);
@@ -89,6 +90,8 @@
   --success: #168a4b;
   --warning: #b77900;
   --orange: #c2410c;
+  /* Orçamento enviado (legal_022): violeta, distinto dos estados. */
+  --quote: #6d4fc2;
   --danger: #d92d3a;
   --info: #1769c2;
 
@@ -143,6 +146,7 @@
   --success: #3fbf7f;
   --warning: #e0a526;
   --orange: #f08a4b;
+  --quote: #a99bf0;
   --danger: #f26b74;
   --info: #5aa2f0;
 
