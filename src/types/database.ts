@@ -497,6 +497,28 @@ export type Database = {
         };
         Relationships: [];
       };
+      legal_expiration_list: {
+        Row: {
+          cancellation_reason: string | null;
+          client_document_number: string | null;
+          client_id: string | null;
+          client_name: string | null;
+          client_trade_name: string | null;
+          document_name: string | null;
+          document_number: string | null;
+          expiration_date: string | null;
+          expiration_type:
+            Database["public"]["Enums"]["legal_expiration_type"] | null;
+          id: string | null;
+          issue_date: string | null;
+          issuer: string | null;
+          notes: string | null;
+          responsible_user_id: string | null;
+          search_text: string | null;
+          status: Database["public"]["Enums"]["legal_expiration_status"] | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       legal_auth_uid: { Args: never; Returns: string };

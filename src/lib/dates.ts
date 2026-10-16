@@ -33,3 +33,10 @@ const civilDateFormatter = new Intl.DateTimeFormat("en-CA", {
 export function toBusinessCivilDate(instant: Date): string {
   return civilDateFormatter.format(instant);
 }
+
+/** Soma dias a uma data civil "aaaa-mm-dd" (sem fuso). */
+export function addCivilDays(value: string, days: number): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}

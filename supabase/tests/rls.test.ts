@@ -564,6 +564,43 @@ describe("vencimentos: integridade da renovação", () => {
   });
 });
 
+describe("legal_expiration_list (legal_017)", () => {
+  it("lista só vencimentos de clientes visíveis, com busca por cliente", async () => {
+    const result = await asUser(db, U.userA, async (tx) => {
+      const { rows: all } = await tx.query<{ id: string }>(
+        "select id from public.legal_expiration_list",
+      );
+      const { rows: found } = await tx.query<{ id: string }>(
+        "select id from public.legal_expiration_list where search_text like '%' || $1 || '%'",
+        ["cliente a"],
+      );
+      return { all: all.map((r) => r.id), found: found.map((r) => r.id) };
+    });
+    expect(result.all).toEqual([expirationOfA]);
+    expect(result.found).toEqual([expirationOfA]);
+  });
+
+  it("não mostra vencimentos excluídos logicamente", async () => {
+    const ids = await asUser(db, U.userA, async (tx) => {
+      await tx.query("select public.legal_delete_expiration($1)", [
+        expirationOfA,
+      ]);
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.legal_expiration_list",
+      );
+      return rows.map((row) => row.id);
+    });
+    expect(ids).toEqual([]);
+  });
+
+  it("anon não consulta a view", async () => {
+    const message = await runAs(db, "anon", { role: "anon" }, (tx) =>
+      expectDbError(tx.query("select 1 from public.legal_expiration_list")),
+    );
+    expect(message).toMatch(/permission denied/);
+  });
+});
+
 describe("vencimentos: ciclo de vida (legal_016)", () => {
   const update = (tx: Transaction, sql: string) =>
     tx.query(`update public.legal_expirations set ${sql} where id = $1`, [

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCivilDate, formatLongDate, toBusinessCivilDate } from "./dates";
+import {
+  addCivilDays,
+  formatCivilDate,
+  formatLongDate,
+  toBusinessCivilDate,
+} from "./dates";
 
 describe("formatLongDate", () => {
   it("formata por extenso em português", () => {
@@ -47,5 +52,13 @@ describe("toBusinessCivilDate", () => {
     expect(toBusinessCivilDate(new Date("2026-10-16T03:00:00Z"))).toBe(
       "2026-10-16",
     );
+  });
+});
+
+describe("addCivilDays", () => {
+  it("atravessa mês, ano e fevereiro bissexto", () => {
+    expect(addCivilDays("2026-10-15", 7)).toBe("2026-10-22");
+    expect(addCivilDays("2026-12-25", 60)).toBe("2027-02-23");
+    expect(addCivilDays("2028-02-28", 1)).toBe("2028-02-29");
   });
 });

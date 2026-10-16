@@ -1,12 +1,18 @@
-import { LayoutDashboard, Users, type LucideIcon } from "lucide-react";
+import {
+  CalendarClock,
+  LayoutDashboard,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
-// Vencimentos e Administração entram quando as rotas existirem,
+// Administração entra quando as rotas existirem,
 // para não levar a páginas inexistentes (ordem canônica: docs/UI-MOCKUPS.md §6).
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clientes", icon: Users },
+  { href: "/expirations", label: "Vencimentos", icon: CalendarClock },
 ];
 
 /** Rótulos do breadcrumb por segmento de rota. */

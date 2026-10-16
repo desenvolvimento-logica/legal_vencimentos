@@ -251,6 +251,13 @@ Estado (15/10/2026): listagem `/clients` (mockup 03) implementada.
 - iniciar/concluir renovação atomicamente;
 - histórico e auditoria.
 
+Estado (16/10/2026): implementada.
+- **Drawer de cadastro e edição** (mockup 04): React Hook Form com o mesmo schema Zod do servidor; o responsável padrão vem da carteira.
+- **Ações por linha:** iniciar, desistir e concluir renovação; cancelar com motivo; excluir.
+- **`/expirations`** (mockup 05): busca, filtros, atalhos de 7/15/30/60 dias e vencidos, ordenação e paginação no servidor (view `legal_expiration_list`, `legal_017`). "Novo vencimento" fora do cliente pede antes a escolha do cliente.
+- **`/expirations/[id]/renew`** (mockup 07): registro atual, novo registro e cadeia histórica.
+- **Validação manual com usuário real:** pendente.
+
 Regras de ciclo de vida (decididas pelo responsável em 16/10/2026; `legal_016`, aplicadas no banco):
 - **Situações:** ACTIVE → RENEWING → RENEWED (só por `legal_complete_renewal`); RENEWING → ACTIVE (desistir); ACTIVE/RENEWING → CANCELLED, com motivo obrigatório. RENEWED e CANCELLED são finais. EXPIRED não é gravado pela aplicação.
 - **Correção de data:** permitida em registros ACTIVE, com auditoria. O cliente do vencimento é imutável.
@@ -362,7 +369,7 @@ Não criar branches ou commits automaticamente quando a tarefa atual não pedir 
   - Meus Clientes e detalhe do cliente (mockups 03 e 04, somente leitura).
 - **Dados:** carga inicial feita (1.147 clientes ativos, 343 usuários, 853 solicitações da Legalização). O cron diário mantém a sincronização incremental.
 - **Pendente de confirmação:** a tela Clientes deve mostrar 1.147 clientes (efeito da `legal_015`).
-- **Próximo:** Fase 6 (cadastro, edição e renovação de vencimentos; mockups 04-drawer, 05 e 07). Depende das questões 1 e 5 abaixo; o mockup 04 sugere, na questão 5, o responsável da Legalização do cliente como padrão.
+- **Próximo:** validar a Fase 6 com usuário real; depois Fase 7 (detalhe das solicitações, mockup 08), Fase 8 (administração, mockups 06, 09–11) e Fase 9 (dashboard).
 
 ## 14. Questões em aberto
 
