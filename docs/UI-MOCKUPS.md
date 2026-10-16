@@ -36,6 +36,7 @@ O asset da aplicação deve ser lido de `public/brand/logo-white-yellow.png`.
 - Amarelo reservado à marca, seleção e ações primárias; não usar em grandes áreas de conteúdo.
 - Cores semânticas reservadas a estados. Todo estado combina cor, texto e ícone.
 - Cantos moderados, sombras pequenas e ausência de efeitos decorativos pesados.
+- Tema claro é o padrão dos mockups. Há também tema escuro (seletor Claro/Escuro/Sistema no cabeçalho, guardado no navegador): mesma marca sobre superfícies navy, tokens em `.dark` de `src/app/globals.css`, contraste AA e paleta do gráfico validada contra o card escuro.
 - Sem gradientes, glassmorphism, ilustrações genéricas ou fotografia de banco de imagens.
 
 ## 4. Tokens de cor

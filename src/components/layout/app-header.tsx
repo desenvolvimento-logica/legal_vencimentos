@@ -6,6 +6,7 @@ import { requireProfile } from "@/lib/auth/session";
 import { AdminNavSlot } from "./admin-nav-slot";
 import { Breadcrumb, BreadcrumbFallback } from "./breadcrumb";
 import { MobileNav } from "./mobile-nav";
+import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 
 // O cabeçalho aparece na hora; só o menu do usuário espera a sessão.
@@ -18,6 +19,7 @@ export function AppHeader() {
           <Breadcrumb />
         </Suspense>
       </div>
+      <ThemeToggle />
       <Suspense
         fallback={
           <div className="size-9 animate-pulse rounded-full bg-muted" />

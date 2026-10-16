@@ -10,8 +10,8 @@ const TONES: Record<MetricTone, { chip: string; value: string }> = {
   neutral: { chip: "bg-muted text-foreground", value: "text-foreground" },
   danger: { chip: "bg-danger/10 text-danger", value: "text-danger" },
   orange: {
-    chip: "bg-orange-600/10 text-orange-700",
-    value: "text-orange-700",
+    chip: "bg-orange/10 text-orange",
+    value: "text-orange",
   },
   warning: { chip: "bg-warning/10 text-warning", value: "text-warning" },
   info: { chip: "bg-info/10 text-info", value: "text-info" },

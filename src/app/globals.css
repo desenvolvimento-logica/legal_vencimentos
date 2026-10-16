@@ -11,6 +11,7 @@
   --color-brand-gold-600: var(--brand-gold-600);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-orange: var(--orange);
   --color-danger: var(--danger);
   --color-info: var(--info);
   --color-background: var(--background);
@@ -57,7 +58,7 @@
 }
 
 :root {
-  /* Marca e paleta (docs/UI-MOCKUPS.md §4). Aplicação somente em tema claro. */
+  /* Marca e paleta (docs/UI-MOCKUPS.md §4). Tema escuro em .dark, abaixo. */
   --brand-navy-950: #101827;
   --brand-navy-900: #172236;
   --brand-gold-500: #f4c400;
@@ -87,6 +88,7 @@
 
   --success: #168a4b;
   --warning: #b77900;
+  --orange: #c2410c;
   --danger: #d92d3a;
   --info: #1769c2;
 
@@ -95,6 +97,10 @@
   --chart-3: #b77900;
   --chart-4: #d92d3a;
   --chart-5: #64748b;
+  /* Distribuição por tipo (slots categóricos 1–3, ordem fixa). */
+  --chart-type-1: #2a78d6;
+  --chart-type-2: #eb6834;
+  --chart-type-3: #1baf7a;
   --radius: 0.625rem;
 
   --sidebar: var(--brand-navy-950);
@@ -107,38 +113,45 @@
   --sidebar-ring: var(--brand-gold-500);
 }
 
+/*
+ * Tema escuro: mesma marca (navy + dourado) sobre superfícies navy. Texto e
+ * estados com contraste AA sobre o card (#111a2b); séries do gráfico nos
+ * passos escuros da paleta de referência, validados contra o card.
+ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --brand-gold-focus: var(--brand-gold-500);
+
+  --background: #0b1120;
+  --foreground: #e5e9f0;
+  --card: #111a2b;
+  --card-foreground: #e5e9f0;
+  --popover: #111a2b;
+  --popover-foreground: #e5e9f0;
+  --primary: var(--brand-gold-500);
+  --primary-foreground: var(--brand-navy-950);
+  --secondary: #172236;
+  --secondary-foreground: #e5e9f0;
+  --muted: #1a2438;
+  --muted-foreground: #94a3b8;
+  --accent: #1a2438;
+  --accent-foreground: #e5e9f0;
+  --destructive: #f26b74;
+  --border: #233046;
+  --input: #3b4a63;
+  --ring: var(--brand-gold-focus);
+
+  --success: #3fbf7f;
+  --warning: #e0a526;
+  --orange: #f08a4b;
+  --danger: #f26b74;
+  --info: #5aa2f0;
+
+  --chart-type-1: #3987e5;
+  --chart-type-2: #d95926;
+  --chart-type-3: #199e70;
+
+  --sidebar: #080d18;
+  --sidebar-border: #1a2438;
 }
 
 @layer base {

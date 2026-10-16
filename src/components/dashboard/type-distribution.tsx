@@ -3,13 +3,14 @@ import type { TypeDistribution as Distribution } from "@/services/dashboard/get-
 
 /**
  * Slots categóricos 1–3 da paleta de referência, em ordem fixa (cor segue o
- * tipo, nunca a posição). Validados contra a superfície branca: o slot 3 fica
- * abaixo de 3:1, por isso a legenda sempre mostra rótulo, quantidade e %.
+ * tipo, nunca a posição), com passos próprios por tema em globals.css.
+ * Validados contra o card: no claro o slot 3 fica abaixo de 3:1, por isso a
+ * legenda sempre mostra rótulo, quantidade e %.
  */
 const TYPE_COLORS = {
-  CERTIDAO: "#2a78d6",
-  LICENCA: "#eb6834",
-  CERTIFICADO: "#1baf7a",
+  CERTIDAO: "var(--chart-type-1)",
+  LICENCA: "var(--chart-type-2)",
+  CERTIFICADO: "var(--chart-type-3)",
 } as const;
 
 const percentFormatter = new Intl.NumberFormat("pt-BR", {

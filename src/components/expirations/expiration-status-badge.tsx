@@ -25,7 +25,7 @@ const ICONS = {
 /** Fundo claro + texto escuro da mesma cor (docs/UI-MOCKUPS.md §4). */
 const TONES: Record<DisplayTone, string> = {
   danger: "bg-danger/10 text-danger",
-  orange: "bg-orange-600/10 text-orange-700",
+  orange: "bg-orange/10 text-orange",
   warning: "bg-warning/10 text-warning",
   info: "bg-info/10 text-info",
   success: "bg-success/10 text-success",
