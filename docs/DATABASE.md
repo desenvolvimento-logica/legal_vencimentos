@@ -324,6 +324,7 @@ Os arquivos também usam o prefixo do sistema: `legal_NNN_descricao.sql`.
 16. `legal_016_expiration_rules.sql` — ciclo de vida dos vencimentos (transições, motivo de cancelamento, correção de data, responsável válido, exclusão lógica por RPC e perfis visíveis). Detalhes em DEVELOPMENT.md, Fase 6.
 17. `legal_017_expiration_list.sql` — view `legal_expiration_list` (security_invoker) com dados do cliente e `search_text` para a busca única da tela Vencimentos.
 18. `legal_018_admin_profiles.sql` — funções administrativas de perfis (candidatos Microsoft sem perfil, criação e edição com validação de hierarquia, auditoria e proteção contra o admin se bloquear).
+19. `legal_019_harden_assign_responsible.sql` — `legal_can_assign_responsible` exige perfil ativo e acesso ao cliente (revisão de segurança).
 
 As migrations são aplicadas manualmente pelo responsável (SQL Editor), não por `supabase db push`, para não interferir no histórico de migrations dos outros sistemas. Toda migration deve ser idempotente quando seguro, pequena, revisável e acompanhada de caminho de rollback documentado. Não executar a migration contra o banco corporativo sem inspecionar o ambiente alvo.
 

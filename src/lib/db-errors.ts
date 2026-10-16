@@ -37,8 +37,28 @@ export function userMessageFromDbError(error: DbError): string {
     case "22023": // invalid_parameter_value
     case "22007": // invalid_datetime_format
     case "23502": // not_null_violation
-      return error.message.startsWith("new row") ? GENERIC : error.message;
+      return isPostgresMessage(error.message)
+        ? (FALLBACKS[error.code] ?? GENERIC)
+        : error.message;
     default:
       return GENERIC;
   }
+}
+
+/** Textos fixos quando a mensagem é do próprio Postgres (não dos triggers legal_). */
+const FALLBACKS: Record<string, string> = {
+  "22007": "Informe uma data válida.",
+  "22023": "Dados inválidos. Revise os campos.",
+  "23502": "Preencha os campos obrigatórios.",
+};
+
+/**
+ * Mensagens nativas do Postgres citam tabelas e colunas ou repetem o valor
+ * digitado; as dos triggers legal_ são frases para o usuário, sem esses
+ * marcadores.
+ */
+function isPostgresMessage(message: string): boolean {
+  return /new row|null value|invalid input syntax|violates|relation "|column "|out of range/i.test(
+    message,
+  );
 }

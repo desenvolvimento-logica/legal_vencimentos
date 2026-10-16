@@ -45,4 +45,29 @@ describe("userMessageFromDbError", () => {
       }),
     ).toBe("Não foi possível concluir a operação. Tente novamente.");
   });
+
+  it("não repassa mensagens nativas do Postgres que citam colunas ou valores", () => {
+    expect(
+      userMessageFromDbError({
+        code: "23502",
+        message:
+          'null value in column "document_name" of relation "legal_expirations" violates not-null constraint',
+      }),
+    ).toBe("Preencha os campos obrigatórios.");
+    expect(
+      userMessageFromDbError({
+        code: "22007",
+        message: 'invalid input syntax for type date: "31/02/2026"',
+      }),
+    ).toBe("Informe uma data válida.");
+  });
+
+  it("mantém as mensagens dos triggers legal_ para esses códigos", () => {
+    expect(
+      userMessageFromDbError({
+        code: "23502",
+        message: "A nova data de vencimento é obrigatória",
+      }),
+    ).toBe("A nova data de vencimento é obrigatória");
+  });
 });

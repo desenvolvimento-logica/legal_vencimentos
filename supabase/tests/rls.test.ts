@@ -747,6 +747,38 @@ describe("vencimentos: responsável (legal_016)", () => {
     expect(message).toMatch(/fora do escopo/);
   });
 
+  it("legal_can_assign_responsible não responde sobre clientes fora do escopo (legal_019)", async () => {
+    const answers = await runAs(
+      db,
+      "authenticated",
+      microsoftClaims(U.userA),
+      async (tx) => {
+        const { rows } = await tx.query<{ own: boolean; other: boolean }>(
+          `select public.legal_can_assign_responsible($1, $2) as own,
+                  public.legal_can_assign_responsible($3, $4) as other`,
+          [C.ofA, P.userA, C.ofB, P.userB],
+        );
+        return rows[0];
+      },
+    );
+    // B é responsável pelo cliente de B, mas A não enxerga esse cliente.
+    expect(answers).toEqual({ own: true, other: false });
+
+    const passwordSession = await runAs(
+      db,
+      "authenticated",
+      passwordClaims(U.userB),
+      async (tx) => {
+        const { rows } = await tx.query<{ ok: boolean }>(
+          "select public.legal_can_assign_responsible($1, $2) as ok",
+          [C.ofB, P.userB],
+        );
+        return rows[0].ok;
+      },
+    );
+    expect(passwordSession).toBe(false);
+  });
+
   it("legal_visible_profiles expõe só perfis relevantes ao usuário", async () => {
     const ids = await asUser(db, U.userA, async (tx) => {
       const { rows } = await tx.query<{ id: string }>(

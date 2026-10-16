@@ -44,7 +44,12 @@ export async function GET(
     );
   }
 
-  const length = Number(upstream.headers.get("content-length") ?? 0);
+  // fetch descomprime gzip/br, mas mantém o content-length original: só o
+  // repassa quando o corpo não veio comprimido.
+  const compressed = Boolean(upstream.headers.get("content-encoding"));
+  const length = compressed
+    ? 0
+    : Number(upstream.headers.get("content-length") ?? 0);
   if (length > MAX_BYTES) {
     return NextResponse.json(
       { error: "Anexo grande demais." },

@@ -84,6 +84,9 @@ describe("safeFileName", () => {
     ["../../etc/passwd", "_.._etc_passwd"],
     ['a"b\r\nc.pdf', "a_b_c.pdf"],
     ["", "anexo"],
+    // Barra invertida no fim escaparia a aspa de fechamento do header.
+    ["relatorio\\", "relatorio_"],
+    ["a;b.pdf", "a_b.pdf"],
   ])("%j → %j", (value, expected) => {
     expect(safeFileName(value)).toBe(expected);
   });

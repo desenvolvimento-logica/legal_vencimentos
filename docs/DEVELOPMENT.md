@@ -396,6 +396,21 @@ feat/admin
 
 Não criar branches ou commits automaticamente quando a tarefa atual não pedir isso.
 
+## 12.1 Revisão de segurança (16/10/2026)
+
+Revisão independente do código e das regras do banco (`legal_001`–`legal_018`): nenhum achado crítico ou alto. Achados de baixa severidade e o tratamento de cada um:
+
+| # | Achado | Tratamento |
+| --- | --- | --- |
+| 1 | Os bypasses de renovação e exclusão dependem dos GUCs `legal.renewal_context`/`legal.delete_context`. Hoje não são alcançáveis pela API (o PostgREST só expõe funções de `public`), mas outro sistema do projeto compartilhado poderia expor uma função com SQL dinâmico | Risco aceito e registrado. Endurecimento possível: funções com dono dedicado e checagem de `current_user` no trigger |
+| 2 | `legal_can_assign_responsible` respondia para qualquer usuário autenticado sobre qualquer cliente | Corrigido em `legal_019` (exige perfil ativo e acesso ao cliente) |
+| 3 | Um limitador de requisições por chamada; cada download consultava o Acessórias | Cliente único por instância e cache de 60 s do detalhe |
+| 4 | Barra invertida no nome do anexo quebrava o `Content-Disposition` | Corrigido (e `;` também é removido) |
+| 5 | `Content-Length` repassado com corpo descomprimido | Só repassado sem `content-encoding` |
+| 6 | Mensagens nativas do Postgres (colunas, valores digitados) chegavam à tela | Substituídas por textos fixos; só as mensagens dos triggers `legal_` são repassadas |
+| 7 | A checagem "só Microsoft" aceita qualquer OAuth de usuário com identidade azure | Conferido: só os provedores `azure` e `email` estão ativos, e o Azure usa a URL do tenant do escritório. **Não habilitar outros provedores OAuth no projeto compartilhado sem revisar `legal_session_is_microsoft`** |
+| 8 | `GET /auth/signout` pode ser disparado por outro site (logout) | Aceito: só encerra a própria sessão |
+
 ## 13.1 Onde paramos (16/10/2026)
 
 - **Fases 0 a 9 implementadas.** Em produção estão login Microsoft, Dashboard (com popups por indicador), Clientes, Vencimentos (cadastro, edição, renovação, cancelamento, exclusão), Solicitações (detalhe, timeline e anexos via servidor) e Administração (Usuários, Hierarquia, Integrações, Auditoria). As migrations `legal_001` a `legal_018` foram aplicadas.

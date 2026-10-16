@@ -80,7 +80,7 @@ export function isAllowedAttachmentUrl(value: string): boolean {
  */
 export function safeFileName(value: string): string {
   const cleaned = value
-    .replace(/[\u0000-\u001f\u007f"\/:*?<>|]+/g, "_")
+    .replace(/[\u0000-\u001f\u007f"\\/:;*?<>|]+/g, "_")
     .replace(/^\.+/, "")
     .trim()
     .slice(0, 150);

@@ -46,25 +46,57 @@ async function isVisible(solId: string): Promise<boolean> {
   return data !== null;
 }
 
-async function fetchDetail(solId: string): Promise<RequestDetail | null> {
+/**
+ * Um cliente por instância do servidor: o limite de 90 req/min vale para
+ * todas as requisições juntas, não para cada uma (cota do token é única).
+ */
+let sharedClient: AcessoriasApiClient | undefined;
+function apiClient(): AcessoriasApiClient {
   const env = getServerEnv();
-  const api = new AcessoriasApiClient({
+  sharedClient ??= new AcessoriasApiClient({
     baseUrl: env.ACESSORIAS_API_URL,
     token: env.ACESSORIAS_API_TOKEN,
     maxRetries: 2,
   });
+  return sharedClient;
+}
+
+/**
+ * Cache curto do detalhe por instância: abrir o painel e baixar anexos em
+ * sequência não gera uma chamada ao Acessórias a cada clique. O acesso do
+ * usuário é verificado antes de consultar o cache (isVisible).
+ */
+const DETAIL_TTL_MS = 60_000;
+const MAX_CACHED = 200;
+const detailCache = new Map<
+  string,
+  { expiresAt: number; detail: RequestDetail | null }
+>();
+
+async function fetchDetail(solId: string): Promise<RequestDetail | null> {
+  const cached = detailCache.get(solId);
+  if (cached && cached.expiresAt > Date.now()) return cached.detail;
+
+  let detail: RequestDetail | null;
   try {
-    const [detail] = await api.get(
+    const [raw] = await apiClient().get(
       `/requests/${solId}`,
       {},
       z.array(acessoriasRequestDetailSchema),
     );
-    return detail ? mapRequestDetail(detail) : null;
+    detail = raw ? mapRequestDetail(raw) : null;
   } catch (error) {
-    if (error instanceof AcessoriasApiError && error.status === 404)
-      return null;
-    throw error;
+    if (!(error instanceof AcessoriasApiError && error.status === 404))
+      throw error;
+    detail = null;
   }
+
+  if (detailCache.size >= MAX_CACHED) {
+    // Remove a entrada mais antiga (Map mantém a ordem de inserção).
+    detailCache.delete(detailCache.keys().next().value!);
+  }
+  detailCache.set(solId, { expiresAt: Date.now() + DETAIL_TTL_MS, detail });
+  return detail;
 }
 
 /** Detalhe da solicitação para a interface, ou null se não visível/inexistente. */
