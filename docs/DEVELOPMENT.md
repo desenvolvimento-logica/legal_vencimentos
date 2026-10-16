@@ -299,7 +299,11 @@ Estado (16/10/2026): usuários (mockup 09) implementados.
   - sincronização manual **incremental** por Server Action (`maxDuration` 300 s, ADMIN exigido, paralelismo bloqueado por `legal_012`);
   - histórico paginado com duração e erro.
   - A carga completa continua pelo `npm run sync`.
-- **Pendente:** auditoria (mockup 11).
+- **`/admin/audit`** (mockup 11):
+  - filtros de usuário, ação, entidade e período (Brasília), com paginação;
+  - detalhe com os campos alterados lado a lado (antes/depois), ignorando `updated_at`/`updated_by`;
+  - somente leitura, sem editar, excluir nem exportar. IP/origem não são registrados.
+- **Carga inicial de perfis (16/10/2026):** a pedido do responsável, foram criados 7 perfis USER, sem gestor, para as responsáveis da Legalização com clientes ativos. Foi gravado com a chave secret, pois as contas ainda não tinham identidade Microsoft; cada criação ficou na auditoria com o ADMIN como autor.
 
 ### Fase 9 — Dashboard
 
@@ -391,15 +395,17 @@ feat/admin
 
 Não criar branches ou commits automaticamente quando a tarefa atual não pedir isso.
 
-## 13.1 Onde paramos (15/10/2026)
+## 13.1 Onde paramos (16/10/2026)
 
-- **Em produção** (https://legal-vencimentos.vercel.app), com migrations `legal_001` a `legal_015` aplicadas:
-  - login Microsoft;
-  - shell (mockup 02);
-  - Meus Clientes e detalhe do cliente (mockups 03 e 04, somente leitura).
-- **Dados:** carga inicial feita (1.147 clientes ativos, 343 usuários, 853 solicitações da Legalização). O cron diário mantém a sincronização incremental.
-- **Pendente de confirmação:** a tela Clientes deve mostrar 1.147 clientes (efeito da `legal_015`).
-- **Próximo:** validar a Fase 6 com usuário real; depois Fase 7 (detalhe das solicitações, mockup 08), Fase 8 (administração, mockups 06, 09–11) e Fase 9 (dashboard).
+- **Fases 0 a 9 implementadas.** Em produção estão login Microsoft, Dashboard (com popups por indicador), Clientes, Vencimentos (cadastro, edição, renovação, cancelamento, exclusão), Solicitações (detalhe, timeline e anexos via servidor) e Administração (Usuários, Hierarquia, Integrações, Auditoria). As migrations `legal_001` a `legal_018` foram aplicadas.
+- **Validação manual pendente:**
+  - download de anexos de solicitações;
+  - primeiro login Microsoft das 7 responsáveis (vínculo automática da identidade com a conta existente);
+  - telas da Fase 8 com usuário real.
+- **Próximo:** Fase 10 (qualidade).
+  - Testes E2E do fluxo principal e de acesso negado.
+  - Revisão de acessibilidade e desempenho.
+  - Definir a hierarquia da equipe (líder/coordenação).
 
 ## 14. Questões em aberto
 

@@ -7,8 +7,8 @@ import {
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
-// Administração entra quando as rotas existirem,
-// para não levar a páginas inexistentes (ordem canônica: docs/UI-MOCKUPS.md §6).
+// Ordem canônica (docs/UI-MOCKUPS.md §6). O grupo Administração fica em
+// admin-nav.tsx e só aparece para ADMIN.
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clientes", icon: Users },

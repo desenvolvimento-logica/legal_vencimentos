@@ -4,7 +4,7 @@ Aplicação web interna para controlar certidões, licenças e certificados dos 
 
 ## Estado do projeto
 
-Fases 0 (setup), 1 (banco) e 2 (autenticação) implementadas. O andamento de cada fase está em `docs/DEVELOPMENT.md`.
+Fases 0 a 9 implementadas: autenticação Microsoft, banco com RLS, sincronização com o Acessórias, clientes, vencimentos, solicitações, administração e dashboard. O andamento de cada fase está em `docs/DEVELOPMENT.md`.
 
 Produção: https://legal-vencimentos.vercel.app (deploy automático a cada push no `main`).
 

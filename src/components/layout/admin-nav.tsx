@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FileClock,
   Network,
   PlugZap,
   ShieldCheck,
@@ -14,11 +15,12 @@ import { cn } from "@/lib/utils";
 
 type AdminItem = { href: string; label: string; icon: LucideIcon };
 
-// Itens entram conforme as telas da Fase 8 existirem (docs/UI-MOCKUPS.md §6).
+// Ordem canônica do grupo Administração (docs/UI-MOCKUPS.md §6).
 const ADMIN_ITEMS: AdminItem[] = [
   { href: "/admin/users", label: "Usuários", icon: UserCog },
   { href: "/admin/hierarchy", label: "Hierarquia", icon: Network },
   { href: "/admin/integrations", label: "Integrações", icon: PlugZap },
+  { href: "/admin/audit", label: "Auditoria", icon: FileClock },
 ];
 
 /** Grupo Administração da sidebar; renderizado só para ADMIN (decidido no servidor). */
