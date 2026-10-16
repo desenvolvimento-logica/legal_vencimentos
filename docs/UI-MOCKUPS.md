@@ -94,6 +94,7 @@ O shell autenticado deve ser único e reutilizado. A sidebar exibe:
 Dashboard
 Clientes
 Vencimentos
+Solicitações
 Administração
   Usuários
   Hierarquia

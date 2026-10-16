@@ -344,6 +344,7 @@ Os arquivos também usam o prefixo do sistema: `legal_NNN_descricao.sql`.
 20. `legal_020_expiration_period_reminder.sql` — periodicidade (`renewal_period`) e lembrete (`reminder_days`, `reminder_date` gerada) em `legal_expirations`; trigger `legal_expirations_apply_period` calcula o vencimento; `legal_complete_renewal` copia periodicidade/lembrete e, com periodicidade, conta o novo período da conclusão.
 21. `legal_021_quote_sent_status.sql` — acrescenta `QUOTE_SENT` a `legal_expiration_status`. Aplicar sozinha, antes da 022 (valor novo de enum não pode ser usado na mesma transação).
 22. `legal_022_quote_sent_rules.sql` — transições de `QUOTE_SENT`, `quote_sent_at` gravada pelo trigger, auditoria `EXPIRATION_QUOTE_SENT`/`EXPIRATION_QUOTE_WITHDRAWN`, `QUOTE_SENT` como vigente em `legal_client_overview` e no índice de lembretes.
+23. `legal_023_request_list.sql` — view `legal_request_list` (security_invoker): solicitações visíveis com cliente e `search_text` para a tela Solicitações.
 
 As migrations são aplicadas manualmente pelo responsável (SQL Editor), não por `supabase db push`, para não interferir no histórico de migrations dos outros sistemas. Toda migration deve ser idempotente quando seguro, pequena, revisável e acompanhada de caminho de rollback documentado. Não executar a migration contra o banco corporativo sem inspecionar o ambiente alvo.
 

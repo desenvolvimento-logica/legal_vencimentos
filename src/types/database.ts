@@ -534,6 +534,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      legal_request_list: {
+        Row: {
+          acessorias_company_id: string | null;
+          acessorias_request_id: string | null;
+          client_document_number: string | null;
+          client_id: string | null;
+          client_name: string | null;
+          completed_at: string | null;
+          due_at: string | null;
+          id: string | null;
+          last_update_at: string | null;
+          office_responsibles: Json | null;
+          opened_at: string | null;
+          priority: string | null;
+          request_type: string | null;
+          search_text: string | null;
+          status: string | null;
+          subject: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       legal_admin_create_profile: {

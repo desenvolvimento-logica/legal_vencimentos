@@ -153,6 +153,7 @@ Não alterar a data do registro anterior para representar a renovação. Toda a 
 - Relacionar prioritariamente por `EmpID`; usar CNPJ/CPF como referência secundária.
 - Na aba Solicitações, listar ID, assunto, tipo, prioridade, status, responsável, abertura e prazo.
 - Filtrar por status, tipo, data e responsável.
+- `/requests` centraliza as solicitações de todos os clientes do escopo: busca por cliente, CNPJ, assunto ou ID; situação (em aberto, atrasadas, concluídas, todas — “em aberto” é sem data de conclusão no Acessórias; padrão), status, tipo, responsável, período e ordenação; atalhos com a quantidade em aberto e atrasada; prazo vencido destacado; o mesmo detalhe somente leitura da aba do cliente (decisão de 16/10/2026).
 - No detalhe, consultar `/requests/{SolID}` quando necessário.
 - Mostrar assunto, status, prioridade, abertura, prazo, responsável, departamento, empresa, conclusão, interações e anexos.
 - Mostrar interações como timeline.
@@ -208,6 +209,7 @@ A tabela de próximos vencimentos mostra cliente, documento, tipo, vencimento, d
 | `/expirations` | Usuário ativo | Acompanhamento. |
 | `/expirations/[id]` | Acesso ao vencimento | Detalhe. |
 | `/expirations/[id]/renew` | Edição no vencimento | Renovação. |
+| `/requests` | Usuário ativo | Central de solicitações do escopo (somente leitura). |
 | `/admin` e subrotas | Administrador | Usuários, hierarquia, integração e auditoria. |
 
 ## 6. Requisitos não funcionais

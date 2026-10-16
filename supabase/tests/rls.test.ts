@@ -831,6 +831,57 @@ describe("legal_expiration_list (legal_017)", () => {
   });
 });
 
+describe("legal_request_list (legal_023)", () => {
+  it("lista só solicitações de clientes visíveis, com o cliente e busca", async () => {
+    const result = await asUser(db, U.userA, async (tx) => {
+      const { rows: all } = await tx.query<{
+        acessorias_request_id: string;
+        client_id: string;
+        client_name: string;
+      }>(
+        "select acessorias_request_id, client_id, client_name from public.legal_request_list",
+      );
+      const { rows: found } = await tx.query<{ acessorias_request_id: string }>(
+        "select acessorias_request_id from public.legal_request_list where search_text like '%' || $1 || '%'",
+        ["cliente a"],
+      );
+      return { all, found: found.map((row) => row.acessorias_request_id) };
+    });
+    expect(result.all).toEqual([
+      {
+        acessorias_request_id: "SOL-A",
+        client_id: C.ofA,
+        client_name: "Cliente A",
+      },
+    ]);
+    expect(result.found).toEqual(["SOL-A"]);
+  });
+
+  it("B não vê as solicitações de A; diretoria vê todas", async () => {
+    const forB = await asUser(db, U.userB, async (tx) => {
+      const { rows } = await tx.query<{ acessorias_request_id: string }>(
+        "select acessorias_request_id from public.legal_request_list order by 1",
+      );
+      return rows.map((row) => row.acessorias_request_id);
+    });
+    const forDirector = await asUser(db, U.director, async (tx) => {
+      const { rows } = await tx.query<{ acessorias_request_id: string }>(
+        "select acessorias_request_id from public.legal_request_list order by 1",
+      );
+      return rows.map((row) => row.acessorias_request_id);
+    });
+    expect(forB).toEqual(["SOL-B"]);
+    expect(forDirector).toEqual(["SOL-A", "SOL-B"]);
+  });
+
+  it("anon não consulta a view", async () => {
+    const message = await runAs(db, "anon", { role: "anon" }, (tx) =>
+      expectDbError(tx.query("select 1 from public.legal_request_list")),
+    );
+    expect(message).toMatch(/permission denied/);
+  });
+});
+
 describe("vencimentos: ciclo de vida (legal_016)", () => {
   const update = (tx: Transaction, sql: string) =>
     tx.query(`update public.legal_expirations set ${sql} where id = $1`, [
