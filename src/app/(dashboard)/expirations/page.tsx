@@ -14,7 +14,6 @@ import { Card } from "@/components/ui/card";
 import { formatCivilDate, toBusinessCivilDate } from "@/lib/dates";
 import { displayStatus } from "@/lib/expirations/display-status";
 import { EXPIRATION_TYPE_LABELS, initials } from "@/lib/labels";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hrefWith } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import {
@@ -24,6 +23,7 @@ import {
   type ExpirationListParams,
   type ExpirationSortKey,
 } from "@/services/expirations/list-expirations";
+import { listVisibleProfileNames } from "@/services/expirations/responsibles";
 
 export const metadata: Metadata = {
   title: "Vencimentos — Controle de Vencimentos",
@@ -66,7 +66,7 @@ async function ExpirationsContent({
   const today = toBusinessCivilDate(new Date());
   const [result, profiles] = await Promise.all([
     listExpirations(params, today),
-    loadProfiles(),
+    listVisibleProfileNames(),
   ]);
 
   const href = (
@@ -261,17 +261,6 @@ async function ExpirationsContent({
       </Card>
     </>
   );
-}
-
-/** Nomes dos perfis relevantes ao usuário (legal_visible_profiles), sem ADMIN. */
-async function loadProfiles(): Promise<{ id: string; name: string }[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("legal_visible_profiles");
-  if (error) throw new Error("Não foi possível carregar os responsáveis.");
-  return data
-    .filter((profile) => profile.active && profile.hierarchy_level !== "ADMIN")
-    .map((profile) => ({ id: profile.id, name: profile.name }))
-    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }
 
 function SortableHeader({

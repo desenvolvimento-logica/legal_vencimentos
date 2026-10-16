@@ -280,6 +280,11 @@ Regras de ciclo de vida (decididas pelo responsável em 16/10/2026; `legal_016`,
 
 - métricas e tabela de próximos vencimentos, com escopo e queries otimizadas.
 
+Estado (16/10/2026): implementada (mockup 02).
+- **Indicadores** (via RLS): total de clientes, vencidos, próximos 7/15/30 dias (janelas acumuladas a partir de hoje), em renovação e renovados no mês corrente, no horário de Brasília. Cada card leva à lista filtrada.
+- **Tabela de próximos vencimentos:** janelas de 7/15/30 dias, incluindo os já vencidos.
+- **Distribuição por tipo:** usa barra empilhada em vez do donut do mockup, porque parte do todo é mais legível em barra (diretriz de visualização). A paleta categórica foi validada contra a superfície branca, e a legenda mostra quantidade e percentual.
+
 ### Fase 10 — Qualidade
 
 - completar testes unitários, integração e E2E;

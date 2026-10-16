@@ -54,3 +54,14 @@ export async function getResponsibleChoices(
     defaultId: fallback?.id ?? null,
   };
 }
+
+/** Nomes dos perfis relevantes ao usuário (legal_visible_profiles), sem ADMIN. */
+export async function listVisibleProfileNames(): Promise<ResponsibleOption[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("legal_visible_profiles");
+  if (error) throw new Error("Não foi possível carregar os responsáveis.");
+  return data
+    .filter((profile) => profile.active && profile.hierarchy_level !== "ADMIN")
+    .map((profile) => ({ id: profile.id, name: profile.name }))
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
