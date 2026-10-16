@@ -429,7 +429,7 @@ Medido em produção com `supabase/inspect/legal_inspect_performance.sql` (`EXPL
 ## 13.1 Onde paramos (16/10/2026)
 
 - **Fases 0 a 9 implementadas.** Em produção estão login Microsoft, Dashboard (com popups por indicador), Clientes, Vencimentos (cadastro, edição, renovação, cancelamento, exclusão), Solicitações (detalhe, timeline e anexos via servidor) e Administração (Usuários, Hierarquia, Integrações, Auditoria). As migrations `legal_001` a `legal_019` foram aplicadas.
-- **Melhorias de 16/10/2026 (legal_020, aplicar):** tema claro/escuro; periodicidade e lembrete no cadastro; vencimento calculado pela periodicidade; “Concluir renovação” direto para vencimentos com periodicidade; popup de detalhes ao clicar na linha em Vencimentos; popup de lembretes ao abrir o app (só o responsável, fechado até o fim da sessão).
+- **Melhorias de 16/10/2026 (legal_020, aplicar):** tema claro/escuro; periodicidade e lembrete no cadastro; vencimento calculado pela periodicidade; “Concluir renovação” direto para vencimentos com periodicidade; popup de detalhes ao clicar na linha em Vencimentos; popup de lembretes ao abrir o app (USER vê os dele; gestão e ADMIN veem os do escopo; fechado até o fim da sessão).
 - **Decisões:** a view `legal_expiration_list` (legal_017) não ganhou colunas — reaplicar legal_017 depois falharia (“cannot drop columns from view”); a tela busca `renewal_period`/`reminder_days` na tabela pelos ids da página.
 - **Validação manual pendente:**
   - download de anexos de solicitações;

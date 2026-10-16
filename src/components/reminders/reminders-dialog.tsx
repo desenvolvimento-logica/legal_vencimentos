@@ -34,14 +34,28 @@ function dismiss() {
 
 const noopSubscribe = () => () => {};
 
+function describe(
+  count: number,
+  truncated: boolean,
+  audience: "own" | "scope",
+): string {
+  const where =
+    audience === "own" ? "sob sua responsabilidade" : "no seu escopo";
+  if (count === 1) return `1 vencimento ${where} pede atenção.`;
+  return `${count}${truncated ? "+" : ""} vencimentos ${where} pedem atenção.`;
+}
+
 /** Popup de lembretes exibido ao abrir o app, até ser fechado na sessão. */
 export function RemindersDialog({
   items,
   today,
+  audience,
   truncated,
 }: {
   items: ReminderItem[];
   today: string;
+  /** "own": só os do responsável; "scope": gestão vê os da equipe. */
+  audience: "own" | "scope";
   truncated: boolean;
 }) {
   // No servidor conta como fechado: o popup só aparece após a hidratação.
@@ -75,9 +89,7 @@ export function RemindersDialog({
             </DialogTitle>
           </div>
           <DialogDescription>
-            {items.length === 1
-              ? "1 vencimento sob sua responsabilidade pede atenção."
-              : `${items.length}${truncated ? "+" : ""} vencimentos sob sua responsabilidade pedem atenção.`}
+            {describe(items.length, truncated, audience)}
           </DialogDescription>
         </DialogHeader>
 
@@ -104,6 +116,11 @@ export function RemindersDialog({
                   <span className="truncate text-sm text-muted-foreground">
                     {item.clientName} · {EXPIRATION_TYPE_LABELS[item.type]}
                   </span>
+                  {audience === "scope" && (
+                    <span className="text-sm text-muted-foreground">
+                      Responsável: {item.responsibleName ?? "sem responsável"}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm tabular-nums">

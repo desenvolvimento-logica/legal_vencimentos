@@ -192,8 +192,8 @@ A tabela de próximos vencimentos mostra cliente, documento, tipo, vencimento, d
 
 ### RF-15 — Lembretes
 
-- Ao abrir o app, um popup lista os vencimentos vigentes (`ACTIVE`/`RENEWING`) sob responsabilidade do usuário cujo lembrete já começou (vencimento − X dias ≤ hoje), inclusive os já vencidos, até 50, os mais próximos primeiro.
-- Só o responsável vê os próprios lembretes.
+- Ao abrir o app, um popup lista os vencimentos vigentes (`ACTIVE`/`RENEWING`) cujo lembrete já começou (vencimento − X dias ≤ hoje), inclusive os já vencidos, até 50, os mais próximos primeiro.
+- USER vê os lembretes em que é o responsável. Liderança, coordenação, gerência, diretoria e ADMIN veem todos os lembretes do seu escopo, com o nome do responsável (decisão de 16/10/2026).
 - Ao fechar, o popup não volta na mesma sessão do navegador; volta após novo login ou ao reabrir o navegador.
 
 ## 5. Rotas
