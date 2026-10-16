@@ -323,6 +323,7 @@ Estado (16/10/2026): implementada (mockup 02).
 ## 10.1 Hospedagem (Vercel)
 
 - Produção: https://legal-vencimentos.vercel.app (primeiro deploy em 15/10/2026).
+- Região das funções: `cle1` (Cleveland), ao lado do Supabase (AWS us-east-2, Ohio, identificado pelo IP do banco em 16/10/2026). Antes era `iad1` (Virginia), cerca de 10–15 ms por consulta, com várias consultas em sequência por página.
 - Projeto `legal-vencimentos` no time Vercel **LuzIA** (plano Hobby; cron limitado a uma execução diária, aceito pelo responsável em 15/10/2026). Node 24.x (`engines` no `package.json`).
 - Deploy via integração Git: push no `main` gera produção. O app da Vercel no GitHub precisa de acesso ao repositório `desenvolvimento-logica/legal_vencimentos`.
 - Variáveis configuradas nos três ambientes: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. `SUPABASE_SECRET_KEY`, `ACESSORIAS_API_TOKEN` e `CRON_SECRET` estão configuradas como variáveis sensíveis, somente em produção. O cron diário está declarado em `vercel.json`.
