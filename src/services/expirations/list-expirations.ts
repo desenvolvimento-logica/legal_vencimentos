@@ -93,6 +93,8 @@ export type ExpirationListItem = {
   status: ExpirationStatus;
   responsibleUserId: string | null;
   notes: string | null;
+  renewalPeriod: Enums<"legal_renewal_period"> | null;
+  reminderDays: number | null;
 };
 
 const CURRENT: ExpirationStatus[] = ["ACTIVE", "RENEWING"];
@@ -168,6 +170,26 @@ export async function listExpirations(
 
   if (error) throw new Error("Não foi possível carregar os vencimentos.");
 
+  // Campos de legal_020 vêm da tabela: a view de legal_017 não muda (ver a
+  // migration). Só os ids da página, com o mesmo RLS.
+  const ids = data.map((row) => row.id!);
+  const extras = new Map<
+    string,
+    {
+      renewal_period: Enums<"legal_renewal_period"> | null;
+      reminder_days: number | null;
+    }
+  >();
+  if (ids.length > 0) {
+    const { data: rows, error: extrasError } = await supabase
+      .from("legal_expirations")
+      .select("id, renewal_period, reminder_days")
+      .in("id", ids);
+    if (extrasError)
+      throw new Error("Não foi possível carregar os vencimentos.");
+    for (const row of rows) extras.set(row.id, row);
+  }
+
   return {
     total: count ?? 0,
     items: data.map((row) => ({
@@ -184,6 +206,8 @@ export async function listExpirations(
       status: row.status!,
       responsibleUserId: row.responsible_user_id,
       notes: row.notes,
+      renewalPeriod: extras.get(row.id!)?.renewal_period ?? null,
+      reminderDays: extras.get(row.id!)?.reminder_days ?? null,
     })),
   };
 }

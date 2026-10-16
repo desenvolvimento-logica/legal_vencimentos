@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { formatCivilDate, toBusinessCivilDate } from "@/lib/dates";
 import { displayStatus } from "@/lib/expirations/display-status";
+import { RENEWAL_PERIOD_LABELS } from "@/lib/expirations/period";
 import { EXPIRATION_TYPE_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import {
@@ -72,6 +73,11 @@ async function RenewContent({ params }: PageProps<"/expirations/[id]/renew">) {
                 ["Número", expiration.documentNumber],
                 ["Emissão", formatCivilDate(expiration.issueDate)],
                 ["Vencimento", formatCivilDate(expiration.expirationDate)],
+                [
+                  "Periodicidade",
+                  expiration.renewalPeriod &&
+                    RENEWAL_PERIOD_LABELS[expiration.renewalPeriod],
+                ],
                 ["Órgão", expiration.issuer],
               ].map(([label, value]) => (
                 <div
@@ -99,7 +105,11 @@ async function RenewContent({ params }: PageProps<"/expirations/[id]/renew">) {
                 Será criado como Ativo
               </span>
             </div>
-            <NewRecordPanel expiration={expiration} returnHref={returnHref} />
+            <NewRecordPanel
+              expiration={expiration}
+              today={today}
+              returnHref={returnHref}
+            />
           </section>
         </Card>
 
@@ -117,9 +127,11 @@ async function RenewContent({ params }: PageProps<"/expirations/[id]/renew">) {
 
 function NewRecordPanel({
   expiration,
+  today,
   returnHref,
 }: {
   expiration: ExpirationRecord;
+  today: string;
   returnHref: string;
 }) {
   if (expiration.status === "RENEWING") {
@@ -127,9 +139,12 @@ function NewRecordPanel({
       <RenewalForm
         expirationId={expiration.id}
         currentExpirationDate={expiration.expirationDate}
+        today={today}
         defaults={{
           documentNumber: "",
           issuer: expiration.issuer ?? "",
+          renewalPeriod: expiration.renewalPeriod,
+          reminderDays: expiration.reminderDays,
         }}
         returnHref={returnHref}
       />

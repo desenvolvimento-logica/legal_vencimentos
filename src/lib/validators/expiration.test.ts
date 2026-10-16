@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { cancelExpirationSchema, createExpirationSchema } from "./expiration";
+import {
+  cancelExpirationSchema,
+  completeRenewalSchema,
+  createExpirationSchema,
+} from "./expiration";
 
 const valid = {
   clientId: "20000000-0000-4000-8000-00000000000a",
@@ -12,6 +16,8 @@ const valid = {
   expirationDate: "2026-12-31",
   responsibleUserId: "",
   notes: "",
+  renewalPeriod: "",
+  reminderDays: "",
 };
 
 describe("createExpirationSchema", () => {
@@ -26,6 +32,8 @@ describe("createExpirationSchema", () => {
       expirationDate: "2026-12-31",
       responsibleUserId: null,
       notes: null,
+      renewalPeriod: null,
+      reminderDays: null,
     });
   });
 
@@ -36,6 +44,10 @@ describe("createExpirationSchema", () => {
     ["issueDate", "31/12/2026", "Informe uma data válida."],
     ["expirationType", "OUTRO", "Selecione o tipo."],
     ["notes", "x".repeat(501), "Use no máximo 500 caracteres."],
+    ["renewalPeriod", "WEEKLY", "Selecione a periodicidade."],
+    ["reminderDays", "0", "Informe de 1 a 365 dias."],
+    ["reminderDays", "366", "Informe de 1 a 365 dias."],
+    ["reminderDays", "1.5", "Informe de 1 a 365 dias."],
   ])("rejeita %s = %j", (field, value, message) => {
     const result = createExpirationSchema.safeParse({
       ...valid,
@@ -53,6 +65,56 @@ describe("createExpirationSchema", () => {
         ...valid,
         expirationDate: "2028-02-29",
       }).success,
+    ).toBe(true);
+  });
+});
+
+describe("periodicidade e lembrete", () => {
+  it("converte o lembrete em número", () => {
+    const result = createExpirationSchema.parse({
+      ...valid,
+      issueDate: "2026-01-10",
+      renewalPeriod: "ANNUAL",
+      reminderDays: " 30 ",
+    });
+    expect(result).toMatchObject({ renewalPeriod: "ANNUAL", reminderDays: 30 });
+  });
+
+  it("periodicidade exige emissão", () => {
+    const result = createExpirationSchema.safeParse({
+      ...valid,
+      renewalPeriod: "MONTHLY",
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      path: ["issueDate"],
+      message: "Informe a emissão para calcular o vencimento.",
+    });
+  });
+});
+
+describe("completeRenewalSchema", () => {
+  const renewal = {
+    expirationId: valid.clientId,
+    expirationDate: "",
+    issueDate: "",
+    documentNumber: "",
+    issuer: "",
+    notes: "",
+    renewalPeriod: "",
+    reminderDays: "",
+  };
+
+  it("sem periodicidade exige a nova data", () => {
+    const result = completeRenewalSchema.safeParse(renewal);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["expirationDate"]);
+  });
+
+  it("com periodicidade a data é calculada pelo banco", () => {
+    expect(
+      completeRenewalSchema.safeParse({ ...renewal, renewalPeriod: "MONTHLY" })
+        .success,
     ).toBe(true);
   });
 });

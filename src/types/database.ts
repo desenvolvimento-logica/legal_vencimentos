@@ -272,6 +272,10 @@ export type Database = {
           issuer: string | null;
           notes: string | null;
           previous_expiration_id: string | null;
+          reminder_date: string | null;
+          reminder_days: number | null;
+          renewal_period:
+            Database["public"]["Enums"]["legal_renewal_period"] | null;
           renewed_at: string | null;
           responsible_user_id: string | null;
           status: Database["public"]["Enums"]["legal_expiration_status"];
@@ -293,6 +297,10 @@ export type Database = {
           issuer?: string | null;
           notes?: string | null;
           previous_expiration_id?: string | null;
+          reminder_date?: string | null;
+          reminder_days?: number | null;
+          renewal_period?:
+            Database["public"]["Enums"]["legal_renewal_period"] | null;
           renewed_at?: string | null;
           responsible_user_id?: string | null;
           status?: Database["public"]["Enums"]["legal_expiration_status"];
@@ -314,6 +322,10 @@ export type Database = {
           issuer?: string | null;
           notes?: string | null;
           previous_expiration_id?: string | null;
+          reminder_date?: string | null;
+          reminder_days?: number | null;
+          renewal_period?:
+            Database["public"]["Enums"]["legal_renewal_period"] | null;
           renewed_at?: string | null;
           responsible_user_id?: string | null;
           status?: Database["public"]["Enums"]["legal_expiration_status"];
@@ -576,6 +588,17 @@ export type Database = {
       legal_get_user_scope: { Args: never; Returns: string[] };
       legal_has_global_scope: { Args: never; Returns: boolean };
       legal_is_admin: { Args: never; Returns: boolean };
+      legal_period_expiration_date: {
+        Args: {
+          issue: string;
+          period: Database["public"]["Enums"]["legal_renewal_period"];
+        };
+        Returns: string;
+      };
+      legal_renewal_period_months: {
+        Args: { period: Database["public"]["Enums"]["legal_renewal_period"] };
+        Returns: number;
+      };
       legal_scope_emails: { Args: never; Returns: string[] };
       legal_session_is_microsoft: { Args: never; Returns: boolean };
       legal_visible_client_ids: { Args: never; Returns: string[] };
@@ -596,6 +619,8 @@ export type Database = {
       legal_expiration_type: "CERTIDAO" | "LICENCA" | "CERTIFICADO";
       legal_hierarchy_level:
         "USER" | "LEADER" | "COORDINATOR" | "MANAGER" | "DIRECTOR" | "ADMIN";
+      legal_renewal_period:
+        "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL";
       legal_sync_status: "RUNNING" | "SUCCESS" | "PARTIAL" | "FAILED";
     };
     CompositeTypes: { [_ in never]: never };

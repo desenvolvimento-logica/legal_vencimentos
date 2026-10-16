@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, LoaderCircle } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -20,6 +20,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  isRenewalPeriod,
+  periodExpirationDate,
+  RENEWAL_PERIOD_LABELS,
+} from "@/lib/expirations/period";
 import { EXPIRATION_TYPE_LABELS } from "@/lib/labels";
 import {
   EXPIRATION_LIMITS,
@@ -121,25 +126,39 @@ function ExpirationForm({
 
   // raw: valida no cliente, mas envia os valores brutos; o servidor revalida
   // com o mesmo schema (que transforma vazios em null).
-  const { register, handleSubmit, formState, setError, control } = useForm<
-    ExpirationFormValues,
-    unknown,
-    ExpirationFormValues
-  >({
-    resolver: zodResolver(expirationFieldsSchema, undefined, { raw: true }),
-    defaultValues: expiration?.values ?? {
-      expirationType: "CERTIDAO",
-      documentName: "",
-      documentNumber: "",
-      issuer: "",
-      issueDate: "",
-      expirationDate: "",
-      responsibleUserId: defaultResponsibleId ?? "",
-      notes: "",
-    },
-  });
+  const { register, handleSubmit, formState, setError, setValue, control } =
+    useForm<ExpirationFormValues, unknown, ExpirationFormValues>({
+      resolver: zodResolver(expirationFieldsSchema, undefined, { raw: true }),
+      defaultValues: expiration?.values ?? {
+        expirationType: "CERTIDAO",
+        documentName: "",
+        documentNumber: "",
+        issuer: "",
+        issueDate: "",
+        expirationDate: "",
+        responsibleUserId: defaultResponsibleId ?? "",
+        notes: "",
+        renewalPeriod: "",
+        reminderDays: "",
+      },
+    });
   const notesLength = useWatch({ control, name: "notes" })?.length ?? 0;
+  const [period, issueDate] = useWatch({
+    control,
+    name: ["renewalPeriod", "issueDate"],
+  });
   const errors = formState.errors;
+  const periodic = isRenewalPeriod(period);
+  // Em renovação a data não muda, então emissão e periodicidade também não.
+  const periodLocked = editing && !allowDateChange;
+
+  // Com periodicidade, o vencimento é emissão + período (o banco recalcula).
+  useEffect(() => {
+    if (!periodic || !/^\d{4}-\d{2}-\d{2}$/.test(issueDate ?? "")) return;
+    setValue("expirationDate", periodExpirationDate(issueDate!, period), {
+      shouldValidate: formState.isSubmitted,
+    });
+  }, [periodic, period, issueDate, setValue, formState.isSubmitted]);
 
   const onSubmit = handleSubmit((values) => {
     setFormError(null);
@@ -222,13 +241,76 @@ function ExpirationForm({
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
+            id="renewalPeriod"
+            label="Periodicidade de renovação"
+            error={errors.renewalPeriod?.message}
+          >
+            {periodLocked ? (
+              <>
+                <Input
+                  id="renewalPeriod"
+                  readOnly
+                  value={
+                    periodic
+                      ? RENEWAL_PERIOD_LABELS[period]
+                      : "Sem periodicidade"
+                  }
+                />
+                <input type="hidden" {...register("renewalPeriod")} />
+              </>
+            ) : (
+              <select
+                id="renewalPeriod"
+                {...register("renewalPeriod")}
+                className={selectClassName}
+                aria-invalid={Boolean(errors.renewalPeriod)}
+              >
+                <option value="">Sem periodicidade</option>
+                {Object.entries(RENEWAL_PERIOD_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          <Field
+            id="reminderDays"
+            label="Lembrete"
+            error={errors.reminderDays?.message}
+            hint="Dias antes do vencimento. Vazio = sem lembrete."
+          >
+            <div className="relative">
+              <Input
+                id="reminderDays"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={EXPIRATION_LIMITS.reminderDaysMax}
+                step={1}
+                placeholder="Ex.: 30"
+                className="pr-12"
+                aria-invalid={Boolean(errors.reminderDays)}
+                {...register("reminderDays")}
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+                dias
+              </span>
+            </div>
+          </Field>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field
             id="issueDate"
             label="Data de emissão"
+            required={periodic}
             error={errors.issueDate?.message}
           >
             <Input
               id="issueDate"
               type="date"
+              readOnly={periodLocked && periodic}
               aria-invalid={Boolean(errors.issueDate)}
               {...register("issueDate")}
             />
@@ -239,15 +321,17 @@ function ExpirationForm({
             required
             error={errors.expirationDate?.message}
             hint={
-              editing && !allowDateChange
+              periodLocked
                 ? "Só pode ser corrigida em registros ativos."
-                : undefined
+                : periodic
+                  ? "Calculada: emissão + periodicidade."
+                  : undefined
             }
           >
             <Input
               id="expirationDate"
               type="date"
-              readOnly={editing && !allowDateChange}
+              readOnly={periodLocked || periodic}
               aria-invalid={Boolean(errors.expirationDate)}
               {...register("expirationDate")}
             />

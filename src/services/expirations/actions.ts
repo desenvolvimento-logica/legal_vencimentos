@@ -60,6 +60,9 @@ export async function createExpiration(input: unknown): Promise<ActionResult> {
       expiration_date: value.expirationDate,
       responsible_user_id: value.responsibleUserId,
       notes: value.notes,
+      // Com periodicidade, o trigger recalcula expiration_date (legal_020).
+      renewal_period: value.renewalPeriod,
+      reminder_days: value.reminderDays,
       // Sobrescritos pelo trigger a partir da sessão.
       created_by: "00000000-0000-0000-0000-000000000000",
       updated_by: "00000000-0000-0000-0000-000000000000",
@@ -90,6 +93,9 @@ export async function updateExpiration(input: unknown): Promise<ActionResult> {
       expiration_date: value.expirationDate,
       responsible_user_id: value.responsibleUserId,
       notes: value.notes,
+      // Com periodicidade, o trigger recalcula expiration_date (legal_020).
+      renewal_period: value.renewalPeriod,
+      reminder_days: value.reminderDays,
     })
     .eq("id", value.expirationId)
     .select("id");
@@ -154,12 +160,36 @@ export async function completeRenewal(input: unknown): Promise<ActionResult> {
   const { data, error } = await supabase.rpc("legal_complete_renewal", {
     old_id: value.expirationId,
     payload: {
-      expiration_date: value.expirationDate,
+      expiration_date: value.expirationDate ?? "",
       issue_date: value.issueDate ?? "",
       document_number: value.documentNumber ?? "",
       issuer: value.issuer ?? "",
       notes: value.notes ?? "",
+      renewal_period: value.renewalPeriod ?? "",
+      reminder_days:
+        value.reminderDays === null ? "" : String(value.reminderDays),
     },
+  });
+  if (error) return { ok: false, error: userMessageFromDbError(error) };
+  refresh();
+  return { ok: true, id: data.id };
+}
+
+/**
+ * Conclusão rápida: só encerra a renovação. O novo registro copia os dados
+ * do atual e nasce ACTIVE (não entra em renovação); com periodicidade, o
+ * vencimento conta da data de conclusão (legal_020).
+ */
+export async function concludeRenewal(
+  expirationId: string,
+): Promise<ActionResult> {
+  if (!isUuid(expirationId))
+    return { ok: false, error: "Vencimento inválido." };
+  const supabase = await authorizedClient();
+  if (!supabase) return NO_SESSION;
+  const { data, error } = await supabase.rpc("legal_complete_renewal", {
+    old_id: expirationId,
+    payload: {},
   });
   if (error) return { ok: false, error: userMessageFromDbError(error) };
   refresh();

@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, Info, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm, type FieldPath } from "react-hook-form";
+import { useEffect, useState, useTransition } from "react";
+import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +13,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  isRenewalPeriod,
+  periodExpirationDate,
+  RENEWAL_PERIOD_LABELS,
+  type RenewalPeriod,
+} from "@/lib/expirations/period";
 import {
   completeRenewalSchema,
   EXPIRATION_LIMITS,
@@ -23,15 +29,25 @@ import { completeRenewal } from "@/services/expirations/actions";
 type RenewalFormProps = {
   expirationId: string;
   currentExpirationDate: string;
-  defaults: { documentNumber: string; issuer: string };
+  /** Data civil de hoje (America/Sao_Paulo): emissão sugerida. */
+  today: string;
+  defaults: {
+    documentNumber: string;
+    issuer: string;
+    renewalPeriod: RenewalPeriod | null;
+    reminderDays: number | null;
+  };
   /** Para onde voltar depois de concluir ou cancelar. */
   returnHref: string;
 };
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Formulário do novo registro na renovação (docs/mockups/07-expiration-renewal.png). */
 export function RenewalForm({
   expirationId,
   currentExpirationDate,
+  today,
   defaults,
   returnHref,
 }: RenewalFormProps) {
@@ -39,26 +55,43 @@ export function RenewalForm({
   const [pending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState, setError } = useForm<
-    CompleteRenewalInput,
-    unknown,
-    CompleteRenewalInput
-  >({
-    resolver: zodResolver(completeRenewalSchema, undefined, { raw: true }),
-    defaultValues: {
-      expirationId,
-      expirationDate: "",
-      issueDate: "",
-      documentNumber: defaults.documentNumber,
-      issuer: defaults.issuer,
-      notes: "",
-    },
-  });
+  const { register, handleSubmit, formState, setError, setValue, control } =
+    useForm<CompleteRenewalInput, unknown, CompleteRenewalInput>({
+      resolver: zodResolver(completeRenewalSchema, undefined, { raw: true }),
+      defaultValues: {
+        expirationId,
+        expirationDate: "",
+        // Com periodicidade, o novo período conta da conclusão (hoje).
+        issueDate: defaults.renewalPeriod ? today : "",
+        documentNumber: defaults.documentNumber,
+        issuer: defaults.issuer,
+        notes: "",
+        renewalPeriod: defaults.renewalPeriod ?? "",
+        reminderDays:
+          defaults.reminderDays === null ? "" : String(defaults.reminderDays),
+      },
+    });
   const errors = formState.errors;
+  const [period, issueDate] = useWatch({
+    control,
+    name: ["renewalPeriod", "issueDate"],
+  });
+  const periodic = isRenewalPeriod(period);
+
+  useEffect(() => {
+    if (!periodic) return;
+    // Sem emissão, o banco usa a data de conclusão (hoje).
+    const base = DATE_PATTERN.test(issueDate ?? "") ? issueDate! : today;
+    setValue("expirationDate", periodExpirationDate(base, period));
+  }, [periodic, period, issueDate, today, setValue]);
 
   const onSubmit = handleSubmit((values) => {
     setFormError(null);
-    if (values.expirationDate <= currentExpirationDate) {
+    if (
+      !isRenewalPeriod(values.renewalPeriod) &&
+      values.expirationDate &&
+      values.expirationDate <= currentExpirationDate
+    ) {
       setError("expirationDate", {
         message: "A nova data deve ser posterior ao vencimento atual.",
       });
@@ -95,6 +128,44 @@ export function RenewalForm({
       )}
       <input type="hidden" {...register("expirationId")} />
 
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field
+          id="renewalPeriod"
+          label="Periodicidade"
+          error={errors.renewalPeriod?.message}
+        >
+          <select
+            id="renewalPeriod"
+            {...register("renewalPeriod")}
+            className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-brand-gold-500/40 focus-visible:outline-none"
+          >
+            <option value="">Sem periodicidade</option>
+            {Object.entries(RENEWAL_PERIOD_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field
+          id="reminderDays"
+          label="Lembrete (dias antes)"
+          error={errors.reminderDays?.message}
+        >
+          <Input
+            id="reminderDays"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={EXPIRATION_LIMITS.reminderDaysMax}
+            step={1}
+            placeholder="Sem lembrete"
+            aria-invalid={Boolean(errors.reminderDays)}
+            {...register("reminderDays")}
+          />
+        </Field>
+      </div>
+
       <Field
         id="issueDate"
         label="Data de emissão"
@@ -107,10 +178,12 @@ export function RenewalForm({
         label="Data de vencimento"
         required
         error={errors.expirationDate?.message}
+        hint={periodic ? "Calculada: emissão + periodicidade." : undefined}
       >
         <Input
           id="expirationDate"
           type="date"
+          readOnly={periodic}
           aria-invalid={Boolean(errors.expirationDate)}
           {...register("expirationDate")}
         />
@@ -174,12 +247,14 @@ function Field({
   label,
   required,
   error,
+  hint,
   children,
 }: {
   id: string;
   label: string;
   required?: boolean;
   error?: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -194,10 +269,12 @@ function Field({
         {required && <span className="sr-only">(obrigatório)</span>}
       </Label>
       {children}
-      {error && (
+      {error ? (
         <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
+      ) : (
+        hint && <p className="text-xs text-muted-foreground">{hint}</p>
       )}
     </div>
   );

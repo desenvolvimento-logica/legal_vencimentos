@@ -14,6 +14,10 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   legal_expirations_notes_check:
     "As observações têm no máximo 2000 caracteres.",
   legal_expirations_one_successor_idx: "Este vencimento já foi renovado.",
+  legal_expirations_reminder_days_check:
+    "O lembrete deve ser de 1 a 365 dias antes do vencimento.",
+  legal_expirations_period_issue_date_check:
+    "Informe a data de emissão para calcular o vencimento pela periodicidade.",
 };
 
 const GENERIC = "Não foi possível concluir a operação. Tente novamente.";

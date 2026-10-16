@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isLoginErrorCode, LOGIN_PATH } from "@/lib/auth/paths";
+import { REMINDERS_DISMISSED_COOKIE } from "@/lib/reminders/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Encerra a sessão de quem está autenticado mas sem perfil ativo (ver requireProfile).
@@ -14,5 +15,7 @@ export async function GET(request: NextRequest) {
   if (isLoginErrorCode(erro)) {
     loginUrl.searchParams.set("erro", erro);
   }
-  return NextResponse.redirect(loginUrl);
+  const response = NextResponse.redirect(loginUrl);
+  response.cookies.delete(REMINDERS_DISMISSED_COOKIE);
+  return response;
 }

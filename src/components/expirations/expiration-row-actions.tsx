@@ -2,7 +2,9 @@
 
 import {
   Ban,
+  CircleCheck,
   EllipsisVertical,
+  FilePen,
   LoaderCircle,
   Pencil,
   RefreshCw,
@@ -32,11 +34,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatCivilDate, toBusinessCivilDate } from "@/lib/dates";
 import type { ExpirationStatus } from "@/lib/expirations/display-status";
+import {
+  isRenewalPeriod,
+  periodExpirationDate,
+  RENEWAL_PERIOD_LABELS,
+} from "@/lib/expirations/period";
 import { EXPIRATION_LIMITS } from "@/lib/validators/expiration";
 import {
   abandonRenewal,
   cancelExpiration,
+  concludeRenewal,
   deleteExpiration,
   startRenewal,
   type ActionResult,
@@ -65,11 +74,13 @@ export function ExpirationRowActions({
   expiration,
   responsibles,
 }: ExpirationRowActionsProps) {
-  const [dialog, setDialog] = useState<"edit" | "cancel" | "delete" | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<
+    "edit" | "cancel" | "delete" | "conclude" | null
+  >(null);
   const [pending, startTransition] = useTransition();
 
+  const period = expiration.values.renewalPeriod;
+  const periodic = isRenewalPeriod(period);
   const editable =
     expiration.status === "ACTIVE" || expiration.status === "RENEWING";
   if (!editable) return null;
@@ -117,12 +128,29 @@ export function ExpirationRowActions({
             </DropdownMenuItem>
           ) : (
             <>
-              <DropdownMenuItem
-                render={<Link href={`/expirations/${expiration.id}/renew`} />}
-              >
-                <RefreshCw aria-hidden />
-                Concluir renovação
-              </DropdownMenuItem>
+              {periodic ? (
+                <>
+                  <DropdownMenuItem onClick={() => setDialog("conclude")}>
+                    <CircleCheck aria-hidden />
+                    Concluir renovação
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    render={
+                      <Link href={`/expirations/${expiration.id}/renew`} />
+                    }
+                  >
+                    <FilePen aria-hidden />
+                    Concluir com outros dados
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem
+                  render={<Link href={`/expirations/${expiration.id}/renew`} />}
+                >
+                  <CircleCheck aria-hidden />
+                  Concluir renovação
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() =>
                   run(
@@ -159,6 +187,36 @@ export function ExpirationRowActions({
         expiration={{ id: expiration.id, values: expiration.values }}
         allowDateChange={expiration.status === "ACTIVE"}
       />
+
+      {periodic && (
+        <AlertDialog
+          open={dialog === "conclude"}
+          onOpenChange={(open) => setDialog(open ? "conclude" : null)}
+        >
+          <AlertDialogContent>
+            <ConcludeDialogBody
+              documentName={expiration.documentName}
+              periodLabel={RENEWAL_PERIOD_LABELS[period]}
+              nextDate={(today) => periodExpirationDate(today, period)}
+            />
+            <AlertDialogFooter>
+              <AlertDialogCancel>Voltar</AlertDialogCancel>
+              <Button
+                disabled={pending}
+                onClick={() => {
+                  setDialog(null);
+                  run(
+                    () => concludeRenewal(expiration.id),
+                    "Renovação concluída. O próximo vencimento está vigente.",
+                  );
+                }}
+              >
+                Concluir renovação
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       <CancelDialog
         open={dialog === "cancel"}
@@ -199,6 +257,31 @@ export function ExpirationRowActions({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+/** Montado só com o diálogo aberto: "hoje" é lido na hora da confirmação. */
+function ConcludeDialogBody({
+  documentName,
+  periodLabel,
+  nextDate,
+}: {
+  documentName: string;
+  periodLabel: string;
+  nextDate: (today: string) => string;
+}) {
+  const [today] = useState(() => toBusinessCivilDate(new Date()));
+  return (
+    <AlertDialogHeader>
+      <AlertDialogTitle>Concluir renovação?</AlertDialogTitle>
+      <AlertDialogDescription>
+        “{documentName}” fica como <strong>Renovado</strong> no histórico. O
+        próximo vencimento é criado vigente, com os mesmos dados: emissão em{" "}
+        {formatCivilDate(today)} e vencimento em{" "}
+        <strong>{formatCivilDate(nextDate(today))}</strong> ({periodLabel}). A
+        renovação dele não é iniciada.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
   );
 }
 

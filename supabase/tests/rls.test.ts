@@ -564,6 +564,112 @@ describe("vencimentos: integridade da renovação", () => {
   });
 });
 
+describe("vencimentos: periodicidade e lembrete (legal_020)", () => {
+  it("calcula o vencimento pela emissão e a data do lembrete", async () => {
+    const row = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA, {
+        issue_date: "2026-01-31",
+        // Ignorada: com periodicidade o banco calcula a data.
+        expiration_date: "2000-01-01",
+        renewal_period: "MONTHLY",
+        reminder_days: 10,
+      });
+      const { rows } = await tx.query<{
+        expiration_date: Date;
+        reminder_date: Date;
+      }>(
+        "select expiration_date, reminder_date from public.legal_expirations where id = $1",
+        [id],
+      );
+      return rows[0];
+    });
+    // Fim de mês inexistente vira o último dia (regra replicada no front).
+    expect(row.expiration_date.toISOString()).toMatch(/^2026-02-28/);
+    expect(row.reminder_date.toISOString()).toMatch(/^2026-02-18/);
+  });
+
+  it("periodicidade exige data de emissão", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(insertExpiration(tx, C.ofA, { renewal_period: "ANNUAL" })),
+    );
+    expect(message).toMatch(/legal_expirations_period_issue_date_check/);
+  });
+
+  it("lembrete fica entre 1 e 365 dias", async () => {
+    const message = await asUser(db, U.userA, (tx) =>
+      expectDbError(insertExpiration(tx, C.ofA, { reminder_days: 0 })),
+    );
+    expect(message).toMatch(/legal_expirations_reminder_days_check/);
+  });
+
+  it("concluir sem dados conta o novo período da data de conclusão", async () => {
+    const outcome = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA, {
+        issue_date: "2026-01-10",
+        renewal_period: "QUARTERLY",
+        reminder_days: 15,
+      });
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [id],
+      );
+      const { rows: created } = await tx.query<{
+        issue_date: Date;
+        expiration_date: Date;
+        renewal_period: string;
+        reminder_days: number;
+        status: string;
+        previous_expiration_id: string;
+      }>("select * from public.legal_complete_renewal($1, '{}'::jsonb)", [id]);
+      const { rows: expected } = await tx.query<{
+        today: Date;
+        due: Date;
+      }>(`select (now() at time zone 'America/Sao_Paulo')::date as today,
+                 public.legal_period_expiration_date(
+                   (now() at time zone 'America/Sao_Paulo')::date, 'QUARTERLY') as due`);
+      const { rows: old } = await tx.query<{
+        status: string;
+        expiration_date: Date;
+      }>(
+        "select status, expiration_date from public.legal_expirations where id = $1",
+        [id],
+      );
+      return { id, created: created[0], expected: expected[0], old: old[0] };
+    });
+
+    expect(outcome.created).toMatchObject({
+      status: "ACTIVE",
+      renewal_period: "QUARTERLY",
+      reminder_days: 15,
+      previous_expiration_id: outcome.id,
+    });
+    expect(outcome.created.issue_date).toEqual(outcome.expected.today);
+    expect(outcome.created.expiration_date).toEqual(outcome.expected.due);
+    expect(outcome.old.status).toBe("RENEWED");
+    expect(outcome.old.expiration_date.toISOString()).toMatch(/^2026-04-10/);
+  });
+
+  it("emissão de registro em renovação não muda o vencimento", async () => {
+    const message = await asUser(db, U.userA, async (tx) => {
+      const id = await insertExpiration(tx, C.ofA, {
+        issue_date: "2026-01-10",
+        renewal_period: "MONTHLY",
+      });
+      await tx.query(
+        "update public.legal_expirations set status = 'RENEWING' where id = $1",
+        [id],
+      );
+      return expectDbError(
+        tx.query(
+          "update public.legal_expirations set issue_date = '2026-03-01' where id = $1",
+          [id],
+        ),
+      );
+    });
+    expect(message).toMatch(/só pode ser corrigida em registros ativos/);
+  });
+});
+
 describe("legal_expiration_list (legal_017)", () => {
   it("lista só vencimentos de clientes visíveis, com busca por cliente", async () => {
     const result = await asUser(db, U.userA, async (tx) => {

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { Reminders } from "@/components/reminders/reminders";
 import { requireProfile } from "@/lib/auth/session";
 
 // Referência visual: docs/mockups/02-dashboard.png (shell autenticado único).
@@ -21,6 +22,10 @@ export default function DashboardLayout({
           </Suspense>
         </main>
       </div>
+      {/* Lembretes do responsável: popup ao abrir o app (legal_020). */}
+      <Suspense fallback={null}>
+        <Reminders />
+      </Suspense>
     </div>
   );
 }

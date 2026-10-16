@@ -5,6 +5,10 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { Pagination } from "@/components/data/pagination";
+import {
+  ExpirationDetailTrigger,
+  ExpirationRow,
+} from "@/components/expirations/expiration-detail-dialog";
 import { ExpirationFilters } from "@/components/expirations/expiration-filters";
 import { ExpirationRowActions } from "@/components/expirations/expiration-row-actions";
 import { ExpirationStatusBadge } from "@/components/expirations/expiration-status-badge";
@@ -13,6 +17,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { formatCivilDate, toBusinessCivilDate } from "@/lib/dates";
 import { displayStatus } from "@/lib/expirations/display-status";
+import { toExpirationFormValues } from "@/lib/expirations/form-values";
 import { EXPIRATION_TYPE_LABELS, initials } from "@/lib/labels";
 import { hrefWith } from "@/lib/url";
 import { cn } from "@/lib/utils";
@@ -146,8 +151,10 @@ async function ExpirationsContent({
                       item.responsibleUserId &&
                       names.get(item.responsibleUserId);
                     return (
-                      <tr
+                      <ExpirationRow
                         key={item.id}
+                        expirationId={item.id}
+                        responsibleName={responsible || null}
                         className="border-t transition-colors hover:bg-muted/40"
                       >
                         <td className="px-4 py-3">
@@ -163,8 +170,10 @@ async function ExpirationsContent({
                             </p>
                           )}
                         </td>
-                        <td className="px-4 py-3 font-medium">
-                          {item.documentName}
+                        <td className="px-4 py-3">
+                          <ExpirationDetailTrigger>
+                            {item.documentName}
+                          </ExpirationDetailTrigger>
                         </td>
                         <td className="px-4 py-3">
                           {EXPIRATION_TYPE_LABELS[item.type]}
@@ -226,22 +235,12 @@ async function ExpirationsContent({
                                 id: item.id,
                                 documentName: item.documentName,
                                 status: item.status,
-                                values: {
-                                  expirationType: item.type,
-                                  documentName: item.documentName,
-                                  documentNumber: item.documentNumber ?? "",
-                                  issuer: item.issuer ?? "",
-                                  issueDate: item.issueDate ?? "",
-                                  expirationDate: item.expirationDate,
-                                  responsibleUserId:
-                                    item.responsibleUserId ?? "",
-                                  notes: item.notes ?? "",
-                                },
+                                values: toExpirationFormValues(item),
                               }}
                             />
                           </div>
                         </td>
-                      </tr>
+                      </ExpirationRow>
                     );
                   })}
                 </tbody>

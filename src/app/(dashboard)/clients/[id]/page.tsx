@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCivilDate, toBusinessCivilDate } from "@/lib/dates";
 import { displayStatus } from "@/lib/expirations/display-status";
+import { toExpirationFormValues } from "@/lib/expirations/form-values";
 import { displayPersonName, EXPIRATION_TYPE_LABELS } from "@/lib/labels";
 import { hrefWith } from "@/lib/url";
 import { cn } from "@/lib/utils";
@@ -431,16 +432,7 @@ async function ExpirationsTab({
                           id: item.id,
                           documentName: item.documentName,
                           status: item.status,
-                          values: {
-                            expirationType: item.type,
-                            documentName: item.documentName,
-                            documentNumber: item.documentNumber ?? "",
-                            issuer: item.issuer ?? "",
-                            issueDate: item.issueDate ?? "",
-                            expirationDate: item.expirationDate,
-                            responsibleUserId: item.responsibleUserId ?? "",
-                            notes: item.notes ?? "",
-                          },
+                          values: toExpirationFormValues(item),
                         }}
                       />
                     ) : (

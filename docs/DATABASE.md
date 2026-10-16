@@ -47,6 +47,16 @@ LICENCA
 CERTIFICADO
 ```
 
+### `legal_renewal_period` (legal_020)
+
+```text
+MONTHLY
+BIMONTHLY
+QUARTERLY
+SEMIANNUAL
+ANNUAL
+```
+
 ### `legal_expiration_status`
 
 ```text
@@ -153,6 +163,9 @@ Cache dos usuários do Acessórias. Não concede acesso à aplicação.
 | `notes` | TEXT NULL |
 | `previous_expiration_id` | UUID NULL, FK autorreferente com `ON DELETE RESTRICT` |
 | `renewed_at` | TIMESTAMPTZ NULL; preenchido quando o registro passa a `RENEWED` (base do indicador “renovados no mês”) |
+| `renewal_period` | `legal_renewal_period` NULL (legal_020); exige `issue_date`, e o trigger define `expiration_date` = emissão + período |
+| `reminder_days` | SMALLINT NULL, 1 a 365 (legal_020) |
+| `reminder_date` | DATE gerada: `expiration_date - reminder_days` (legal_020); índice parcial por responsável para o popup de lembretes |
 | `created_by` | UUID NOT NULL, FK `legal_profiles(id)` com `ON DELETE RESTRICT` |
 | `updated_by` | UUID NOT NULL, FK `legal_profiles(id)` com `ON DELETE RESTRICT` |
 | `created_at` | TIMESTAMPTZ NOT NULL DEFAULT now() |
@@ -300,6 +313,8 @@ Funções `SECURITY DEFINER` precisam de owner controlado, `search_path` explíc
 6. gravar auditoria dos dois efeitos;
 7. retornar o novo registro.
 
+Com periodicidade (legal_020), o payload pode ser vazio: o novo registro copia os dados do anterior, `issue_date` = hoje em America/Sao_Paulo (ou a emissão informada) e `expiration_date` = emissão + período; a data enviada é ignorada. `renewal_period` e `reminder_days` são copiados, salvo se vierem no payload.
+
 Tudo ocorre na mesma transação. Repetição da mesma requisição não pode criar dois sucessores; garantir isso por lock e regra/índice compatível com o modelo final.
 
 ## 7. Ordem das migrations
@@ -325,6 +340,7 @@ Os arquivos também usam o prefixo do sistema: `legal_NNN_descricao.sql`.
 17. `legal_017_expiration_list.sql` — view `legal_expiration_list` (security_invoker) com dados do cliente e `search_text` para a busca única da tela Vencimentos.
 18. `legal_018_admin_profiles.sql` — funções administrativas de perfis (candidatos Microsoft sem perfil, criação e edição com validação de hierarquia, auditoria e proteção contra o admin se bloquear).
 19. `legal_019_harden_assign_responsible.sql` — `legal_can_assign_responsible` exige perfil ativo e acesso ao cliente (revisão de segurança).
+20. `legal_020_expiration_period_reminder.sql` — periodicidade (`renewal_period`) e lembrete (`reminder_days`, `reminder_date` gerada) em `legal_expirations`; trigger `legal_expirations_apply_period` calcula o vencimento; `legal_complete_renewal` copia periodicidade/lembrete e, com periodicidade, conta o novo período da conclusão.
 
 As migrations são aplicadas manualmente pelo responsável (SQL Editor), não por `supabase db push`, para não interferir no histórico de migrations dos outros sistemas. Toda migration deve ser idempotente quando seguro, pequena, revisável e acompanhada de caminho de rollback documentado. Não executar a migration contra o banco corporativo sem inspecionar o ambiente alvo.
 

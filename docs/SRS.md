@@ -96,7 +96,9 @@ A relação hierárquica é formada por `legal_profiles.manager_id`. A semântic
 
 - Criar pela rota ou modal `/clients/[id]/expirations/new`.
 - Obrigatórios: cliente, tipo, documento e data de vencimento.
-- Opcionais: emissão, número, órgão emissor e observações.
+- Opcionais: emissão, número, órgão emissor, observações, periodicidade de renovação e lembrete.
+- Periodicidade: Mensal, Bimestral, Trimestral, Semestral ou Anual. Com periodicidade, a emissão é obrigatória e o vencimento é calculado como emissão + período (dia inexistente no mês final vira o último dia do mês); sem periodicidade, a data é informada.
+- Lembrete: X dias antes do vencimento (1 a 365). A partir dessa data, o vencimento aparece no popup de lembretes do responsável (RF-15).
 - Tipo aceita `CERTIDAO`, `LICENCA` ou `CERTIFICADO`.
 - Preencher o responsável automaticamente a partir do contexto autorizado.
 - Validar no cliente e novamente no servidor com Zod.
@@ -110,6 +112,7 @@ A relação hierárquica é formada por `legal_profiles.manager_id`. A semântic
 - Oferecer atalhos: vencidos e próximos 7, 15, 30 ou 60 dias.
 - Colunas: cliente, documento, tipo, vencimento, dias, responsável, status e ações.
 - Paginação, filtro e ordenação são server-side; padrão `expiration_date ASC`.
+- Clicar na linha (ou no nome do documento, pelo teclado) abre um popup com os dados da renovação: emissão, vencimento, periodicidade, lembrete, responsável, situação, sucessor/motivo quando houver e renovações anteriores.
 
 ### RF-07 — Estado e vencimento calculado
 
@@ -134,6 +137,7 @@ Combinar sempre texto, ícone e badge; cor isolada não é suficiente.
 3. Ao concluir, uma operação atômica muda o anterior para `RENEWED` e cria outro `ACTIVE`.
 4. O novo aponta para o anterior por `previous_expiration_id`.
 5. Falha em qualquer etapa desfaz toda a conclusão.
+6. Com periodicidade, “Concluir renovação” conclui direto (com confirmação): o novo registro copia os dados do atual, nasce `ACTIVE` (a renovação dele não é iniciada) e o novo período conta da data de conclusão (emissão = hoje). “Concluir com outros dados” abre o formulário. Sem periodicidade, a conclusão sempre usa o formulário, que exige a nova data.
 
 Não alterar a data do registro anterior para representar a renovação. Toda a cadeia deve ser reconstruível.
 
@@ -185,6 +189,12 @@ A tabela de próximos vencimentos mostra cliente, documento, tipo, vencimento, d
 - O detalhe mostra `old_data` e `new_data`.
 - Registrar criação/edição de vencimento, renovação, cancelamento, exclusão lógica e mudanças de responsável, usuário, hierarquia ou permissões.
 - O log é append-only para usuários da aplicação.
+
+### RF-15 — Lembretes
+
+- Ao abrir o app, um popup lista os vencimentos vigentes (`ACTIVE`/`RENEWING`) sob responsabilidade do usuário cujo lembrete já começou (vencimento − X dias ≤ hoje), inclusive os já vencidos, até 50, os mais próximos primeiro.
+- Só o responsável vê os próprios lembretes.
+- Ao fechar, o popup não volta na mesma sessão do navegador; volta após novo login ou ao reabrir o navegador.
 
 ## 5. Rotas
 

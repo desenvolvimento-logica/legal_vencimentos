@@ -17,6 +17,13 @@ export type ExpirationRecord = {
   expirationDate: string;
   status: ExpirationStatus;
   previousExpirationId: string | null;
+  renewalPeriod: Enums<"legal_renewal_period"> | null;
+  reminderDays: number | null;
+  responsibleUserId: string | null;
+  notes: string | null;
+  cancellationReason: string | null;
+  renewedAt: string | null;
+  createdAt: string;
 };
 
 export type ExpirationWithChain = {
@@ -24,10 +31,12 @@ export type ExpirationWithChain = {
   client: { id: string; name: string };
   /** Do registro atual para os mais antigos (cadeia de renovações). */
   chain: ExpirationRecord[];
+  /** Registro que substituiu este na renovação (só em RENEWED). */
+  next: ExpirationRecord | null;
 };
 
 const SELECT =
-  "id, client_id, expiration_type, document_name, document_number, issuer, issue_date, expiration_date, status, previous_expiration_id";
+  "id, client_id, expiration_type, document_name, document_number, issuer, issue_date, expiration_date, status, previous_expiration_id, renewal_period, reminder_days, responsible_user_id, notes, cancellation_reason, renewed_at, created_at";
 
 /** Limite de segurança ao percorrer a cadeia (ela é acíclica por construção). */
 const MAX_CHAIN = 50;
@@ -43,6 +52,13 @@ type Row = {
   expiration_date: string;
   status: ExpirationStatus;
   previous_expiration_id: string | null;
+  renewal_period: Enums<"legal_renewal_period"> | null;
+  reminder_days: number | null;
+  responsible_user_id: string | null;
+  notes: string | null;
+  cancellation_reason: string | null;
+  renewed_at: string | null;
+  created_at: string;
 };
 
 function toRecord(row: Row): ExpirationRecord {
@@ -57,6 +73,13 @@ function toRecord(row: Row): ExpirationRecord {
     expirationDate: row.expiration_date,
     status: row.status,
     previousExpirationId: row.previous_expiration_id,
+    renewalPeriod: row.renewal_period,
+    reminderDays: row.reminder_days,
+    responsibleUserId: row.responsible_user_id,
+    notes: row.notes,
+    cancellationReason: row.cancellation_reason,
+    renewedAt: row.renewed_at,
+    createdAt: row.created_at,
   };
 }
 
@@ -99,9 +122,20 @@ export async function getExpirationWithChain(
     previousId = previous.previous_expiration_id;
   }
 
+  let next: ExpirationRecord | null = null;
+  if (current.status === "RENEWED") {
+    const { data: successor } = await supabase
+      .from("legal_expirations")
+      .select(SELECT)
+      .eq("previous_expiration_id", current.id)
+      .maybeSingle();
+    next = successor ? toRecord(successor) : null;
+  }
+
   return {
     expiration: toRecord(current),
     client: { id: client.id, name: client.corporate_name },
     chain,
+    next,
   };
 }
