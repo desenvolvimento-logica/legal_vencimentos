@@ -1,4 +1,4 @@
-import { Clock, RotateCcw, Search, TriangleAlert } from "lucide-react";
+import { Clock, Leaf, RotateCcw, Search, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { EXPIRATION_TYPE_LABELS } from "@/lib/labels";
 import { hrefWith } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import {
+  CETESB_PERIOD,
   PERIODS,
   SITUATIONS,
   type ExpirationListParams,
@@ -106,12 +107,22 @@ export function ExpirationFilters({
           <Chip
             key={days}
             href={hrefWith("/expirations", base, { periodo: days })}
-            active={params.periodo === days}
+            active={params.periodo === days && !params.orgao}
             icon={Clock}
           >
             {days === 7 ? "Próximos 7 dias" : `${days} dias`}
           </Chip>
         ))}
+        <Chip
+          href={hrefWith("/expirations", base, {
+            periodo: CETESB_PERIOD,
+            orgao: "cetesb",
+          })}
+          active={params.orgao === "cetesb"}
+          icon={Leaf}
+        >
+          CETESB · {CETESB_PERIOD} dias
+        </Chip>
         <Link
           href="/expirations"
           className={cn(

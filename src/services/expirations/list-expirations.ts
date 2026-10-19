@@ -31,6 +31,18 @@ export const SITUATIONS = {
 export type SituationKey = keyof typeof SITUATIONS;
 
 export const PERIODS = [7, 15, 30, 60] as const;
+
+/**
+ * Atalho CETESB: licenças ambientais de SP, acompanhadas com antecedência
+ * maior. Identificadas pelo órgão emissor ou pelo nome do documento.
+ */
+export const CETESB_PERIOD = 180;
+const ALLOWED_PERIODS: readonly number[] = [...PERIODS, CETESB_PERIOD];
+
+/** Órgãos com atalho próprio; o filtro é fixo (não vem do texto digitado). */
+const AGENCY_FILTERS = {
+  cetesb: "issuer.ilike.*cetesb*,document_name.ilike.*cetesb*",
+} as const;
 export const PAGE_SIZES = [10, 20, 50] as const;
 
 const optionalText = z
@@ -57,9 +69,10 @@ export const expirationListParamsSchema = z.object({
     .catch("vigentes"),
   periodo: z.coerce
     .number()
-    .refine((value) => (PERIODS as readonly number[]).includes(value))
+    .refine((value) => ALLOWED_PERIODS.includes(value))
     .optional()
     .catch(undefined),
+  orgao: z.enum(["cetesb"]).optional().catch(undefined),
   de: optionalCivilDate,
   ate: optionalCivilDate,
   pagina: z.coerce.number().int().min(1).catch(1),
@@ -125,6 +138,7 @@ export async function listExpirations(
     query = query.ilike("search_text", `%${term}%`);
   }
   if (params.tipo) query = query.eq("expiration_type", params.tipo);
+  if (params.orgao) query = query.or(AGENCY_FILTERS[params.orgao]);
 
   if (params.periodo) {
     // Atalho "próximos N dias": vigentes entre hoje e hoje + N (inclusivo).

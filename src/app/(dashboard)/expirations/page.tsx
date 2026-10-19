@@ -82,6 +82,7 @@ async function ExpirationsContent({
     params.q ||
     params.tipo ||
     params.periodo ||
+    params.orgao ||
     params.de ||
     params.ate ||
     params.situacao !== "vigentes",

@@ -110,6 +110,7 @@ A relação hierárquica é formada por `legal_profiles.manager_id`. A semântic
 - Buscar por razão social, nome fantasia, CNPJ ou documento.
 - Filtrar por tipo, status, data inicial e data final.
 - Oferecer atalhos: vencidos e próximos 7, 15, 30 ou 60 dias.
+- Atalho CETESB: vigentes da CETESB (órgão emissor ou nome do documento contendo “CETESB”) que vencem de hoje até 180 dias (decisão de 19/10/2026).
 - Colunas: cliente, documento, tipo, vencimento, dias, responsável, status e ações.
 - Paginação, filtro e ordenação são server-side; padrão `expiration_date ASC`.
 - Clicar na linha (ou no nome do documento, pelo teclado) abre um popup com os dados da renovação: emissão, vencimento, periodicidade, lembrete, responsável, situação, sucessor/motivo quando houver e renovações anteriores.

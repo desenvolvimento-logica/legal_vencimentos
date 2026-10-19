@@ -32,6 +32,15 @@ describe("expirationListParamsSchema", () => {
     });
   });
 
+  it("atalho CETESB: 180 dias só com o órgão fixo", () => {
+    expect(
+      expirationListParamsSchema.parse({ periodo: "180", orgao: "cetesb" }),
+    ).toMatchObject({ periodo: 180, orgao: "cetesb" });
+    expect(
+      expirationListParamsSchema.parse({ orgao: "ibama" }).orgao,
+    ).toBeUndefined();
+  });
+
   it("aceita atalhos e filtros válidos", () => {
     expect(
       expirationListParamsSchema.parse({

@@ -48,6 +48,7 @@ const DOCUMENT_SUGGESTIONS = [
   "Certidão Negativa de Débitos Trabalhistas (CNDT)",
   "Certificado Digital e-CNPJ",
   "Licença Ambiental",
+  "Licença de Operação (CETESB)",
   "Licença Sanitária",
 ];
 
@@ -56,6 +57,7 @@ const ISSUER_SUGGESTIONS = [
   "Receita Federal",
   "Secretaria da Fazenda Estadual",
   "Corpo de Bombeiros",
+  "CETESB",
   "Vigilância Sanitária",
   "Caixa Econômica Federal",
   "Tribunal Superior do Trabalho",
