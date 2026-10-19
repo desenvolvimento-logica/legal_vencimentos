@@ -49,3 +49,4 @@ next-env.d.ts
 
 # Planilhas de importação (dados de clientes): nunca versionar.
 /docs/*.xlsx
+__pycache__/
