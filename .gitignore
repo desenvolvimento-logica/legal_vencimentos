@@ -46,3 +46,6 @@ next-env.d.ts
 
 # vercel link
 .vercel
+
+# Planilhas de importação (dados de clientes): nunca versionar.
+/docs/*.xlsx
