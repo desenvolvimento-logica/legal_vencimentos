@@ -128,17 +128,20 @@ def main():
     sql = f"""-- Importação dos vencimentos do sistema anterior. Gerado por
 -- scripts/legacy-import/generate.py; contém dados de clientes: não versionar.
 -- Pré-requisito: legal_024 aplicada. Rodar uma vez no SQL Editor; rodar de
--- novo não duplica. Retorna uma única célula JSON. Tudo ou nada.
+-- novo não duplica. Retorna uma única célula JSON.
+--
+-- O SQL Editor grava cada comando separadamente: as tabelas temporárias
+-- duram a sessão (preserve rows) e toda a gravação em legal_expirations
+-- acontece num único bloco DO, que é tudo ou nada.
 
-begin;
-
-create temp table if not exists legal_import_rows (
+drop table if exists legal_import_rows, legal_import_result, legal_import_match;
+create temp table legal_import_rows (
   sheet text, line int, client_name text, document_name text,
   expiration_type text, expiration_date date, notes text
-) on commit drop;
-create temp table if not exists legal_import_result (
+) on commit preserve rows;
+create temp table legal_import_result (
   sheet text, line int, client_name text, outcome text
-) on commit drop;
+) on commit preserve rows;
 
 insert into legal_import_rows values
   {values};
@@ -166,7 +169,7 @@ begin
     true
   );
 
-  create temp table legal_import_match on commit drop as
+  create temp table legal_import_match on commit preserve rows as
   with names as (
     select distinct client_name,
            {base('client_name')} ~ '(^| )(F ?\\d{{1,2}}|FILIAL)( |$)' as is_branch,
@@ -277,8 +280,6 @@ select jsonb_build_object(
       select client_name, outcome, count(*) n from legal_import_result
       where outcome not in ('importado', 'já existia') group by client_name, outcome) t)
 ) as result;
-
-commit;
 """
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(sql, encoding="utf-8", newline="\n")
