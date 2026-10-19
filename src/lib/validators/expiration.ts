@@ -1,13 +1,14 @@
 import { z } from "zod";
 
 import { RENEWAL_PERIODS } from "@/lib/expirations/period";
+import { EXPIRATION_TYPES } from "@/lib/labels";
 
 /** Limites também aplicados no banco (legal_004/legal_016). */
 export const EXPIRATION_LIMITS = {
   documentName: 200,
   documentNumber: 100,
   issuer: 200,
-  notes: 500,
+  notes: 2000,
   cancellationReason: 500,
   reminderDaysMax: 365,
 } as const;
@@ -73,7 +74,7 @@ function requireIssueDateWithPeriod(
 }
 
 const expirationFieldsShape = z.object({
-  expirationType: z.enum(["CERTIDAO", "LICENCA", "CERTIFICADO"], {
+  expirationType: z.enum(EXPIRATION_TYPES, {
     error: "Selecione o tipo.",
   }),
   documentName: z

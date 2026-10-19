@@ -45,6 +45,7 @@ ADMIN
 CERTIDAO
 LICENCA
 CERTIFICADO
+OUTRO   (legal_024)
 ```
 
 ### `legal_renewal_period` (legal_020)
@@ -345,6 +346,7 @@ Os arquivos também usam o prefixo do sistema: `legal_NNN_descricao.sql`.
 21. `legal_021_quote_sent_status.sql` — acrescenta `QUOTE_SENT` a `legal_expiration_status`. Aplicar sozinha, antes da 022 (valor novo de enum não pode ser usado na mesma transação).
 22. `legal_022_quote_sent_rules.sql` — transições de `QUOTE_SENT`, `quote_sent_at` gravada pelo trigger, auditoria `EXPIRATION_QUOTE_SENT`/`EXPIRATION_QUOTE_WITHDRAWN`, `QUOTE_SENT` como vigente em `legal_client_overview` e no índice de lembretes.
 23. `legal_023_request_list.sql` — view `legal_request_list` (security_invoker): solicitações visíveis com cliente e `search_text` para a tela Solicitações.
+24. `legal_024_expiration_type_other.sql` — acrescenta `OUTRO` a `legal_expiration_type`. Aplicar sozinha, antes da importação do sistema anterior.
 
 As migrations são aplicadas manualmente pelo responsável (SQL Editor), não por `supabase db push`, para não interferir no histórico de migrations dos outros sistemas. Toda migration deve ser idempotente quando seguro, pequena, revisável e acompanhada de caminho de rollback documentado. Não executar a migration contra o banco corporativo sem inspecionar o ambiente alvo.
 

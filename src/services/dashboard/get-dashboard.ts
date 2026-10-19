@@ -2,6 +2,7 @@ import "server-only";
 
 import { addCivilDays } from "@/lib/dates";
 import type { ExpirationStatus } from "@/lib/expirations/display-status";
+import { EXPIRATION_TYPES } from "@/lib/labels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
 
@@ -70,7 +71,7 @@ export async function getDashboard(today: string, window: UpcomingWindow) {
       "renewedThisMonth",
       today,
     ),
-    ...(["CERTIDAO", "LICENCA", "CERTIFICADO"] as const).map((type) =>
+    ...EXPIRATION_TYPES.map((type) =>
       list().in("status", CURRENT).eq("expiration_type", type),
     ),
   ]);
@@ -124,10 +125,9 @@ export async function getDashboard(today: string, window: UpcomingWindow) {
       status: row.status!,
       responsibleUserId: row.responsible_user_id,
     })),
-    distribution: [
-      { type: "CERTIDAO", count: types[0] },
-      { type: "LICENCA", count: types[1] },
-      { type: "CERTIFICADO", count: types[2] },
-    ] satisfies TypeDistribution,
+    distribution: EXPIRATION_TYPES.map((type, index) => ({
+      type,
+      count: types[index],
+    })) satisfies TypeDistribution,
   };
 }

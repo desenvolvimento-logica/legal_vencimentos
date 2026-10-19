@@ -104,6 +104,7 @@
   --chart-type-1: #2a78d6;
   --chart-type-2: #eb6834;
   --chart-type-3: #1baf7a;
+  --chart-type-other: #8a94a6;
   --radius: 0.625rem;
 
   --sidebar: var(--brand-navy-950);
@@ -153,6 +154,7 @@
   --chart-type-1: #3987e5;
   --chart-type-2: #d95926;
   --chart-type-3: #199e70;
+  --chart-type-other: #6b7a90;
 
   --sidebar: #080d18;
   --sidebar-border: #1a2438;

@@ -17,7 +17,7 @@ describe("expirationListParamsSchema", () => {
   it("descarta valores fora das listas permitidas", () => {
     expect(
       expirationListParamsSchema.parse({
-        tipo: "OUTRO",
+        tipo: "ALVARA",
         situacao: "qualquer",
         periodo: "45",
         de: "15/10/2026",

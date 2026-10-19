@@ -99,7 +99,7 @@ A relação hierárquica é formada por `legal_profiles.manager_id`. A semântic
 - Opcionais: emissão, número, órgão emissor, observações, periodicidade de renovação e lembrete.
 - Periodicidade: Mensal, Bimestral, Trimestral, Semestral ou Anual. Com periodicidade, a emissão é obrigatória e o vencimento é calculado como emissão + período (dia inexistente no mês final vira o último dia do mês); sem periodicidade, a data é informada.
 - Lembrete: X dias antes do vencimento (1 a 365). A partir dessa data, o vencimento aparece no popup de lembretes do responsável (RF-15).
-- Tipo aceita `CERTIDAO`, `LICENCA` ou `CERTIFICADO`.
+- Tipo aceita `CERTIDAO`, `LICENCA`, `CERTIFICADO` ou `OUTRO` (“Outros”: procurações, declarações, isenções etc.; decisão de 19/10/2026).
 - Preencher o responsável automaticamente a partir do contexto autorizado.
 - Validar no cliente e novamente no servidor com Zod.
 - Após sucesso, invalidar consultas afetadas, confirmar a operação e gerar auditoria.

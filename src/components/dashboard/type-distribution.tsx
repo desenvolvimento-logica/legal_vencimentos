@@ -11,6 +11,8 @@ const TYPE_COLORS = {
   CERTIDAO: "var(--chart-type-1)",
   LICENCA: "var(--chart-type-2)",
   CERTIFICADO: "var(--chart-type-3)",
+  // "Outros" em cinza neutro: categoria residual, não um 4º matiz.
+  OUTRO: "var(--chart-type-other)",
 } as const;
 
 const percentFormatter = new Intl.NumberFormat("pt-BR", {

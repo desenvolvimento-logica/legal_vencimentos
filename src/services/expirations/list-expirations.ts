@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { addCivilDays } from "@/lib/dates";
+import { EXPIRATION_TYPES } from "@/lib/labels";
 import type { ExpirationStatus } from "@/lib/expirations/display-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
@@ -60,10 +61,7 @@ const optionalCivilDate = z
 
 export const expirationListParamsSchema = z.object({
   q: optionalText,
-  tipo: z
-    .enum(["CERTIDAO", "LICENCA", "CERTIFICADO"])
-    .optional()
-    .catch(undefined),
+  tipo: z.enum(EXPIRATION_TYPES).optional().catch(undefined),
   situacao: z
     .enum(Object.keys(SITUATIONS) as [SituationKey, ...SituationKey[]])
     .catch("vigentes"),

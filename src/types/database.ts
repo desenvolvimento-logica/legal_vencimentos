@@ -645,7 +645,7 @@ export type Database = {
         | "RENEWED"
         | "EXPIRED"
         | "CANCELLED";
-      legal_expiration_type: "CERTIDAO" | "LICENCA" | "CERTIFICADO";
+      legal_expiration_type: "CERTIDAO" | "LICENCA" | "CERTIFICADO" | "OUTRO";
       legal_hierarchy_level:
         "USER" | "LEADER" | "COORDINATOR" | "MANAGER" | "DIRECTOR" | "ADMIN";
       legal_renewal_period:
